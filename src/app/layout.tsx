@@ -17,10 +17,6 @@ export const metadata: Metadata = {
   title: "CampusOps - Smart Campus Issue Reporter",
   description:
     "A centralized platform for campus infrastructure issue reporting and maintenance management.",
-  icons: {
-    icon: "/favicon.png",
-    apple: "/favicon.png",
-  },
 };
 
 export default function RootLayout({

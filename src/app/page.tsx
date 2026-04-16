@@ -65,23 +65,29 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-white dark:bg-gray-950">
-      {/* Left branding panel */}
-      <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden bg-gradient-to-br from-indigo-600 via-indigo-600 to-purple-700">
-        <div className="absolute inset-0">
-          <div className="absolute top-20 left-10 h-64 w-64 rounded-full bg-white/5 blur-2xl" />
-          <div className="absolute bottom-20 right-10 h-80 w-80 rounded-full bg-white/5 blur-3xl" />
-        </div>
+    <div className="min-h-screen flex flex-col lg:flex-row bg-gray-950">
+      {/* Left branding panel — Cyber theme */}
+      <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden bg-gray-950">
+        {/* Cyber grid overlay */}
+        <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "linear-gradient(rgba(0,255,200,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,200,0.3) 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
+        {/* Neon glow blobs */}
+        <div className="absolute -top-20 -left-20 h-[400px] w-[400px] rounded-full bg-cyan-500/15 blur-[100px]" />
+        <div className="absolute bottom-0 right-0 h-[350px] w-[350px] rounded-full bg-emerald-500/10 blur-[100px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[250px] w-[250px] rounded-full bg-teal-400/5 blur-[80px]" />
+        {/* Scan line effect */}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-400/[0.03] to-transparent animate-pulse" />
 
         <div className="relative z-10 flex flex-col justify-center px-14 xl:px-20 text-white">
           <div className="mb-10">
-            <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-white/15 backdrop-blur-sm font-bold text-lg mb-6">
-              CO
+            <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-cyan-400/10 border border-cyan-400/20 backdrop-blur-sm font-bold text-xl mb-8 shadow-[0_0_20px_rgba(0,255,200,0.15)]">
+              <span className="text-cyan-400">CO</span>
             </div>
-            <h1 className="text-3xl xl:text-4xl font-bold tracking-tight leading-tight">
-              CampusOps
+            <h1 className="text-3xl xl:text-4xl font-extrabold tracking-tight leading-tight">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400">
+                CampusOps
+              </span>
             </h1>
-            <p className="text-[15px] text-white/60 mt-2.5 max-w-sm leading-relaxed">
+            <p className="text-[15px] text-gray-400 mt-2.5 max-w-sm leading-relaxed">
               Staff & Admin Portal — Manage campus infrastructure, assign tasks,
               and track resolutions.
             </p>
@@ -105,13 +111,13 @@ export default function Home() {
                 desc: "Monitor resolution progress and escalation alerts",
               },
             ].map((item, i) => (
-              <div key={i} className="flex items-start gap-3.5">
-                <div className="flex-shrink-0 flex items-center justify-center h-9 w-9 rounded-lg bg-white/10 backdrop-blur-sm">
-                  {item.icon}
+              <div key={i} className="flex items-start gap-3.5 group">
+                <div className="flex-shrink-0 flex items-center justify-center h-9 w-9 rounded-lg bg-cyan-400/10 border border-cyan-400/15 group-hover:border-cyan-400/30 group-hover:shadow-[0_0_15px_rgba(0,255,200,0.1)] transition-all duration-300">
+                  <span className="text-cyan-400">{item.icon}</span>
                 </div>
                 <div>
-                  <p className="font-medium text-sm">{item.title}</p>
-                  <p className="text-sm text-white/50 mt-0.5">{item.desc}</p>
+                  <p className="font-medium text-sm text-gray-100">{item.title}</p>
+                  <p className="text-sm text-gray-500 mt-0.5">{item.desc}</p>
                 </div>
               </div>
             ))}
@@ -120,42 +126,42 @@ export default function Home() {
       </div>
 
       {/* Right login panel */}
-      <div className="flex-1 flex items-center justify-center px-6 py-10 lg:px-16 relative">
-        <MouseSpotlight color="rgba(99, 102, 241, 0.05)" size={600} />
+      <div className="flex-1 flex items-center justify-center px-6 py-10 lg:px-16 relative bg-gray-950">
+        <MouseSpotlight color="rgba(6, 182, 212, 0.04)" size={600} />
         <AnimatedGrid />
         <div className="w-full max-w-[400px] relative z-10">
           {/* Mobile header */}
           <div className="lg:hidden text-center mb-8">
-            <div className="inline-flex items-center justify-center h-11 w-11 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold text-sm mb-3">
+            <div className="inline-flex items-center justify-center h-11 w-11 rounded-xl bg-cyan-400/10 border border-cyan-400/20 text-cyan-400 font-bold text-sm mb-3">
               CO
             </div>
-            <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+            <h1 className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-emerald-400">
               CampusOps
             </h1>
-            <p className="text-gray-500 text-[13px] mt-0.5">
+            <p className="text-gray-400 text-[13px] mt-0.5">
               Staff & Admin Portal
             </p>
           </div>
 
           {/* Desktop heading */}
           <div className="hidden lg:block mb-7">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+            <h2 className="text-xl font-bold text-gray-100">
               Staff Login
             </h2>
-            <p className="text-gray-500 text-[13px] mt-1">
+            <p className="text-gray-400 text-[13px] mt-1">
               Sign in with your staff credentials to continue
             </p>
           </div>
 
-          <Card className="shadow-sm border-gray-100 rounded-2xl">
+          <Card className="shadow-sm border-gray-800 rounded-2xl bg-gray-900/80 backdrop-blur-sm">
             <CardHeader className="px-6 pt-6 pb-4">
               <div className="flex items-center gap-2">
-                <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-indigo-50 text-indigo-600">
+                <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-cyan-400/10 text-cyan-400">
                   <Lock className="h-4 w-4" />
                 </div>
                 <div>
-                  <CardTitle className="text-[16px]">Admin Sign In</CardTitle>
-                  <CardDescription className="text-[13px]">
+                  <CardTitle className="text-[16px] text-gray-100">Admin Sign In</CardTitle>
+                  <CardDescription className="text-[13px] text-gray-400">
                     HODs & Administrators only
                   </CardDescription>
                 </div>
@@ -166,7 +172,7 @@ export default function Home() {
                 <div className="space-y-1.5">
                   <Label
                     htmlFor="loginId"
-                    className="text-[13px] font-medium text-gray-700 dark:text-gray-300"
+                    className="text-[13px] font-medium text-gray-300"
                   >
                     Staff ID
                   </Label>
@@ -177,14 +183,14 @@ export default function Home() {
                     value={loginId}
                     onChange={(e) => setLoginId(e.target.value)}
                     placeholder="e.g. STAFF001"
-                    className="h-10 text-[13px] rounded-lg border-gray-200 focus:border-indigo-300 focus:ring-indigo-200"
+                    className="h-10 text-[13px] rounded-lg border-gray-700 bg-gray-800/50 text-gray-100 placeholder:text-gray-500 focus:border-cyan-500/50 focus:ring-cyan-500/20"
                   />
                 </div>
 
                 <div className="space-y-1.5">
                   <Label
                     htmlFor="password"
-                    className="text-[13px] font-medium text-gray-700 dark:text-gray-300"
+                    className="text-[13px] font-medium text-gray-300"
                   >
                     Password
                   </Label>
@@ -196,12 +202,12 @@ export default function Home() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="DD-MM-YYYY"
-                      className="h-10 text-[13px] pr-10 rounded-lg border-gray-200 focus:border-indigo-300 focus:ring-indigo-200"
+                      className="h-10 text-[13px] pr-10 rounded-lg border-gray-700 bg-gray-800/50 text-gray-100 placeholder:text-gray-500 focus:border-cyan-500/50 focus:ring-cyan-500/20"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
                     >
                       {showPassword ? (
                         <EyeOff className="h-4 w-4" />
@@ -210,7 +216,7 @@ export default function Home() {
                       )}
                     </button>
                   </div>
-                  <p className="text-[13px] text-gray-400">
+                  <p className="text-[13px] text-gray-500">
                     Use your Date of Birth as password
                   </p>
                 </div>
@@ -218,7 +224,7 @@ export default function Home() {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-10 mt-1 text-[13px] font-medium rounded-lg"
+                  className="w-full h-10 mt-1 text-[13px] font-medium rounded-lg bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-gray-950 border-0"
                 >
                   {loading ? (
                     <span className="flex items-center gap-2">
@@ -234,10 +240,10 @@ export default function Home() {
               </form>
 
               {/* Demo credentials */}
-              <div className="h-px bg-gray-100" />
+              <div className="h-px bg-gray-800" />
               <div>
-                <p className="text-[12px] font-semibold text-indigo-600 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                <p className="text-[12px] font-semibold text-cyan-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
                   Quick Demo Access
                 </p>
                 <div className="grid gap-1.5">
@@ -249,10 +255,10 @@ export default function Home() {
                         setLoginId(acc.loginId);
                         setPassword(acc.plainPassword);
                       }}
-                      className="w-full flex items-center justify-between px-4 py-3 rounded-lg border border-gray-100 bg-gray-50/50 hover:border-indigo-200 hover:bg-indigo-50/30 transition-all text-left group"
+                      className="w-full flex items-center justify-between px-4 py-3 rounded-lg border border-gray-800 bg-gray-800/30 hover:border-cyan-500/30 hover:bg-cyan-950/20 transition-all text-left group"
                     >
                       <div className="flex items-center gap-2.5">
-                        <div className="flex items-center justify-center h-7 w-7 rounded-md bg-indigo-50 text-indigo-500">
+                        <div className="flex items-center justify-center h-7 w-7 rounded-md bg-cyan-400/10 text-cyan-400">
                           {acc.role === "admin" ? (
                             <BarChart3 className="h-3.5 w-3.5" />
                           ) : (
@@ -260,17 +266,17 @@ export default function Home() {
                           )}
                         </div>
                         <div>
-                          <span className="font-medium text-gray-800 group-hover:text-indigo-600 transition-colors block text-[13px]">
+                          <span className="font-medium text-gray-200 group-hover:text-cyan-400 transition-colors block text-[13px]">
                             {acc.loginId}
                           </span>
-                          <span className="text-gray-400 text-[13px]">
+                          <span className="text-gray-500 text-[13px]">
                             {acc.label}
                           </span>
                         </div>
                       </div>
                       <Badge
                         variant="secondary"
-                        className="text-[12px] capitalize rounded-md"
+                        className="text-[12px] capitalize rounded-md bg-gray-800 text-gray-300 border-gray-700"
                       >
                         {acc.role}
                       </Badge>
@@ -281,7 +287,7 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          <p className="text-center text-[13px] text-gray-400 mt-6">
+          <p className="text-center text-[13px] text-gray-500 mt-6">
             &copy; {new Date().getFullYear()} CampusOps — Staff & Admin Portal
           </p>
         </div>

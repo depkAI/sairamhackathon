@@ -106,7 +106,7 @@ export default function LoginPage() {
         <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20 2xl:px-24 text-white w-full">
           {/* Logo */}
           <div className="mb-12">
-            <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-cyan-400/10 border border-cyan-400/20 backdrop-blur-sm font-bold text-xl mb-8 shadow-[0_0_20px_rgba(0,255,200,0.15)]">
+            <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-cyan-400/10 border border-cyan-400/20 backdrop-blur-sm font-bold text-xl mb-8 shadow-[0_0_20px_rgba(0,255,200,0.15)] hover:shadow-[0_0_30px_rgba(0,255,200,0.3)] hover:border-cyan-400/40 hover:bg-cyan-400/15 transition-all duration-500 cursor-default">
               <span className="text-cyan-400">CO</span>
             </div>
             <h1 className="text-4xl xl:text-5xl font-extrabold tracking-tight leading-tight">
@@ -127,13 +127,13 @@ export default function LoginPage() {
               { icon: <Users className="h-5 w-5" />, title: "Role-Based Workflows", desc: "Students, staff, and workers each have tailored dashboards and actions" },
               { icon: <Zap className="h-5 w-5" />, title: "Real-Time Tracking", desc: "Monitor issue resolution from submission to completion with live updates" },
             ].map((item, i) => (
-              <div key={i} className="flex items-start gap-4 group">
-                <div className="flex-shrink-0 flex items-center justify-center h-11 w-11 rounded-xl bg-cyan-400/10 border border-cyan-400/15 group-hover:border-cyan-400/30 group-hover:shadow-[0_0_15px_rgba(0,255,200,0.1)] transition-all duration-300">
-                  <span className="text-cyan-400">{item.icon}</span>
+              <div key={i} className="flex items-start gap-4 group p-3 -mx-3 rounded-xl hover:bg-cyan-400/[0.04] transition-all duration-300 cursor-default">
+                <div className="flex-shrink-0 flex items-center justify-center h-11 w-11 rounded-xl bg-cyan-400/10 border border-cyan-400/15 group-hover:border-cyan-400/40 group-hover:shadow-[0_0_20px_rgba(0,255,200,0.15)] group-hover:bg-cyan-400/15 transition-all duration-300">
+                  <span className="text-cyan-400 group-hover:text-cyan-300 transition-colors duration-300">{item.icon}</span>
                 </div>
                 <div>
-                  <p className="font-semibold text-[15px] text-gray-100">{item.title}</p>
-                  <p className="text-sm text-gray-500 mt-1 leading-relaxed">{item.desc}</p>
+                  <p className="font-semibold text-[15px] text-gray-100 group-hover:text-cyan-300 transition-colors duration-300">{item.title}</p>
+                  <p className="text-sm text-gray-500 group-hover:text-gray-400 mt-1 leading-relaxed transition-colors duration-300">{item.desc}</p>
                 </div>
               </div>
             ))}
@@ -147,9 +147,9 @@ export default function LoginPage() {
                 { value: "4.8\u2605", label: "User Rating" },
                 { value: "<2hr", label: "Avg Response" },
               ].map((s, i) => (
-                <div key={i}>
-                  <p className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-emerald-400">{s.value}</p>
-                  <p className="text-xs text-gray-600 mt-1 uppercase tracking-wider font-medium">{s.label}</p>
+                <div key={i} className="group p-3 -mx-1 rounded-lg hover:bg-cyan-400/[0.05] transition-all duration-300 cursor-default">
+                  <p className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-emerald-400 group-hover:from-cyan-300 group-hover:to-emerald-300 transition-all duration-300">{s.value}</p>
+                  <p className="text-xs text-gray-600 group-hover:text-gray-400 mt-1 uppercase tracking-wider font-medium transition-colors duration-300">{s.label}</p>
                 </div>
               ))}
             </div>
@@ -182,7 +182,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <Card className="shadow-sm border-gray-100 dark:border-gray-800 rounded-2xl">
+          <Card className="shadow-sm border-gray-100 dark:border-gray-800 rounded-2xl hover:shadow-xl hover:shadow-cyan-500/[0.04] dark:hover:shadow-cyan-500/[0.08] hover:border-gray-200 dark:hover:border-gray-700 transition-all duration-500">
             <CardHeader className="px-6 pt-6 pb-4">
               <CardTitle className="text-[16px]">Sign in</CardTitle>
               <CardDescription className="text-[13px]">
@@ -198,16 +198,16 @@ export default function LoginPage() {
                   setPassword("");
                 }}
               >
-                <TabsList className="grid w-full grid-cols-3 h-10 rounded-xl">
-                  <TabsTrigger value="student" className="gap-1.5 text-[13px] rounded-lg">
+                <TabsList className="grid w-full grid-cols-3 h-10 rounded-xl bg-gray-100/80 dark:bg-gray-800/60">
+                  <TabsTrigger value="student" className="gap-1.5 text-[13px] rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm data-[state=active]:text-cyan-600 dark:data-[state=active]:text-cyan-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition-all duration-200">
                     <GraduationCap className="h-3.5 w-3.5" />
                     Student
                   </TabsTrigger>
-                  <TabsTrigger value="staff" className="gap-1.5 text-[13px] rounded-lg">
+                  <TabsTrigger value="staff" className="gap-1.5 text-[13px] rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm data-[state=active]:text-cyan-600 dark:data-[state=active]:text-cyan-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition-all duration-200">
                     <Shield className="h-3.5 w-3.5" />
                     Staff
                   </TabsTrigger>
-                  <TabsTrigger value="worker" className="gap-1.5 text-[13px] rounded-lg">
+                  <TabsTrigger value="worker" className="gap-1.5 text-[13px] rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-sm data-[state=active]:text-cyan-600 dark:data-[state=active]:text-cyan-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition-all duration-200">
                     <Wrench className="h-3.5 w-3.5" />
                     Worker
                   </TabsTrigger>
@@ -226,7 +226,7 @@ export default function LoginPage() {
                         value={loginId}
                         onChange={(e) => setLoginId(e.target.value)}
                         placeholder={cfg.idPlaceholder}
-                        className="h-10 text-[13px] rounded-lg border-gray-200 dark:border-gray-700 focus:border-indigo-300 focus:ring-indigo-200"
+                        className="h-10 text-[13px] rounded-lg border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 focus:border-cyan-400/60 focus:ring-cyan-400/20 focus:shadow-[0_0_0_3px_rgba(6,182,212,0.08)] transition-all duration-200"
                       />
                     </div>
 
@@ -242,12 +242,12 @@ export default function LoginPage() {
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           placeholder="DD-MM-YYYY"
-                          className="h-10 text-[13px] pr-10 rounded-lg border-gray-200 dark:border-gray-700 focus:border-indigo-300 focus:ring-indigo-200"
+                          className="h-10 text-[13px] pr-10 rounded-lg border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 focus:border-cyan-400/60 focus:ring-cyan-400/20 focus:shadow-[0_0_0_3px_rgba(6,182,212,0.08)] transition-all duration-200"
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-cyan-500 dark:hover:text-cyan-400 transition-colors duration-200"
                         >
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
@@ -260,7 +260,7 @@ export default function LoginPage() {
                     <Button
                       type="submit"
                       disabled={loading}
-                      className="w-full h-10 mt-1 text-[13px] font-medium rounded-lg"
+                      className="w-full h-10 mt-1 text-[13px] font-medium rounded-lg bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 hover:shadow-lg hover:shadow-cyan-500/25 active:scale-[0.98] text-white border-0 transition-all duration-300"
                     >
                       {loading ? (
                         <span className="flex items-center gap-2">
@@ -282,8 +282,8 @@ export default function LoginPage() {
                 <>
                   <div className="h-px bg-gray-100 dark:bg-gray-800" />
                   <div>
-                    <p className="text-[12px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                    <p className="text-[12px] font-semibold text-cyan-600 dark:text-cyan-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-cyan-500 animate-pulse shadow-[0_0_6px_rgba(6,182,212,0.6)]" />
                       Quick Demo Access
                     </p>
                     <div className="grid gap-1.5">
@@ -295,22 +295,22 @@ export default function LoginPage() {
                             setLoginId(acc.loginId);
                             setPassword(acc.plainPassword);
                           }}
-                          className="w-full flex items-center justify-between px-4 py-3 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30 hover:border-indigo-200 dark:hover:border-indigo-700 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20 transition-all text-left group"
+                          className="w-full flex items-center justify-between px-4 py-3 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30 hover:border-cyan-300 dark:hover:border-cyan-800 hover:bg-cyan-50/50 dark:hover:bg-cyan-950/20 hover:shadow-sm hover:shadow-cyan-500/[0.06] active:scale-[0.99] transition-all duration-200 text-left group"
                         >
                           <div className="flex items-center gap-2.5">
-                            <div className="flex items-center justify-center h-7 w-7 rounded-md bg-indigo-50 dark:bg-indigo-950/30 text-indigo-500">
+                            <div className="flex items-center justify-center h-7 w-7 rounded-md bg-cyan-50 dark:bg-cyan-950/30 text-cyan-500 group-hover:bg-cyan-100 dark:group-hover:bg-cyan-900/40 group-hover:shadow-[0_0_8px_rgba(6,182,212,0.15)] transition-all duration-200">
                               {activeTab === "student" && <GraduationCap className="h-3.5 w-3.5" />}
                               {activeTab === "staff" && <Shield className="h-3.5 w-3.5" />}
                               {activeTab === "worker" && <Wrench className="h-3.5 w-3.5" />}
                             </div>
                             <div>
-                              <span className="font-medium text-gray-800 dark:text-gray-200 group-hover:text-indigo-600 transition-colors block text-[13px]">
+                              <span className="font-medium text-gray-800 dark:text-gray-200 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors duration-200 block text-[13px]">
                                 {acc.loginId}
                               </span>
                               <span className="text-gray-400 dark:text-gray-500 text-[13px]">{acc.label}</span>
                             </div>
                           </div>
-                          <Badge variant="secondary" className="text-[12px] capitalize rounded-md">
+                          <Badge variant="secondary" className="text-[12px] capitalize rounded-md group-hover:bg-cyan-100 dark:group-hover:bg-cyan-950/40 group-hover:text-cyan-700 dark:group-hover:text-cyan-300 transition-colors duration-200">
                             {acc.role}
                           </Badge>
                         </button>

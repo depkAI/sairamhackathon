@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useTasks, updateTask, updateComplaint, addNotification, notifyRole } from "@/lib/useData";
+import { useTasks, useComplaints, updateTask, updateComplaint, addNotification, notifyRole } from "@/lib/useData";
 import DashboardLayout from "@/components/DashboardLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +38,13 @@ import {
   IndianRupee,
   ClipboardCheck,
   RefreshCw,
+  MapPin,
+  Building,
+  Tag,
+  Mic,
+  Image,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import MouseGlowCard from "@/components/effects/MouseGlowCard";
 
@@ -63,6 +70,8 @@ export default function WorkerActiveTasks() {
   const tasks = useTasks(
     profile ? { field: "workerId", value: profile.uid } : undefined
   );
+  const allComplaints = useComplaints();
+  const [expandedTask, setExpandedTask] = useState<string | null>(null);
   const [quotationModal, setQuotationModal] = useState<string | null>(null);
   const [quotationAmount, setQuotationAmount] = useState("");
   const [quotationNote, setQuotationNote] = useState("");
@@ -338,6 +347,8 @@ export default function WorkerActiveTasks() {
                   const time = getTimeRemaining(t.deadline);
                   const isNewAssignment =
                     t.status === "assigned" && t.accepted === null;
+                  const complaint = allComplaints.find((c) => c.id === t.complaintId);
+                  const isExpanded = expandedTask === t.id;
 
                   return (
                     <Card
@@ -363,6 +374,22 @@ export default function WorkerActiveTasks() {
                                 </Badge>
                               )}
                             </div>
+                            {complaint && (
+                              <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <Tag className="h-3 w-3" />
+                                  <span className="capitalize">{complaint.category}</span>
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" />
+                                  {complaint.location}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <Building className="h-3 w-3" />
+                                  {complaint.department}
+                                </span>
+                              </div>
+                            )}
                             <div className="flex items-center gap-2 flex-wrap">
                               <Badge
                                 variant={statusVariant(t.status)}
@@ -379,6 +406,25 @@ export default function WorkerActiveTasks() {
                                     Quotation Rejected
                                   </Badge>
                                 )}
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground ml-auto"
+                                onClick={() => setExpandedTask(isExpanded ? null : t.id)}
+                              >
+                                {isExpanded ? (
+                                  <>
+                                    <ChevronUp className="h-3 w-3 mr-1" />
+                                    Hide Details
+                                  </>
+                                ) : (
+                                  <>
+                                    <ChevronDown className="h-3 w-3 mr-1" />
+                                    View Details
+                                  </>
+                                )}
+                              </Button>
                             </div>
                           </div>
 
@@ -436,7 +482,87 @@ export default function WorkerActiveTasks() {
                         </div>
                       </CardHeader>
 
-                      <CardContent className="pt-0">
+                      <CardContent className="pt-0 space-y-4">
+                        {/* Expandable Complaint Details */}
+                        {isExpanded && complaint && (
+                          <div className="rounded-xl border bg-muted/20 p-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                            <div>
+                              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+                                Description
+                              </p>
+                              <p className="text-sm text-foreground leading-relaxed">
+                                {complaint.description}
+                              </p>
+                            </div>
+
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                              <div className="bg-background rounded-lg p-2.5 space-y-1">
+                                <div className="flex items-center gap-1 text-muted-foreground">
+                                  <Tag className="h-3 w-3" />
+                                  <span className="text-[10px] font-medium uppercase tracking-wider">Category</span>
+                                </div>
+                                <p className="text-xs font-medium text-foreground capitalize">{complaint.category}</p>
+                              </div>
+                              <div className="bg-background rounded-lg p-2.5 space-y-1">
+                                <div className="flex items-center gap-1 text-muted-foreground">
+                                  <MapPin className="h-3 w-3" />
+                                  <span className="text-[10px] font-medium uppercase tracking-wider">Location</span>
+                                </div>
+                                <p className="text-xs font-medium text-foreground">{complaint.location}</p>
+                              </div>
+                              <div className="bg-background rounded-lg p-2.5 space-y-1">
+                                <div className="flex items-center gap-1 text-muted-foreground">
+                                  <Building className="h-3 w-3" />
+                                  <span className="text-[10px] font-medium uppercase tracking-wider">Department</span>
+                                </div>
+                                <p className="text-xs font-medium text-foreground">{complaint.department}</p>
+                              </div>
+                              <div className="bg-background rounded-lg p-2.5 space-y-1">
+                                <div className="flex items-center gap-1 text-muted-foreground">
+                                  <Clock className="h-3 w-3" />
+                                  <span className="text-[10px] font-medium uppercase tracking-wider">Reported</span>
+                                </div>
+                                <p className="text-xs font-medium text-foreground">{new Date(complaint.createdAt).toLocaleDateString()}</p>
+                              </div>
+                            </div>
+
+                            {complaint.attachments && complaint.attachments.length > 0 && (
+                              <div>
+                                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+                                  <Image className="h-3 w-3" />
+                                  Photos ({complaint.attachments.length})
+                                </p>
+                                <div className="flex gap-2 flex-wrap">
+                                  {complaint.attachments.map((url, i) => (
+                                    <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                                      <img
+                                        src={url}
+                                        alt={`Attachment ${i + 1}`}
+                                        className="h-20 w-20 rounded-lg object-cover border hover:opacity-80 transition-opacity cursor-pointer"
+                                      />
+                                    </a>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {complaint.audioAttachment && (
+                              <div>
+                                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+                                  <Mic className="h-3 w-3" />
+                                  Voice Note
+                                </p>
+                                <audio controls className="w-full h-8">
+                                  <source src={complaint.audioAttachment} />
+                                </audio>
+                              </div>
+                            )}
+
+                            <p className="text-[11px] text-muted-foreground">
+                              Reported by: <span className="font-medium text-foreground">{complaint.createdByName}</span>
+                            </p>
+                          </div>
+                        )}
                         {/* 48-Hour Timer */}
                         <div
                           className={`rounded-xl border p-4 ${

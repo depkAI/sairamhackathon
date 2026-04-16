@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f1f5f9;
+  --foreground: #0f172a;
 }
 
 @theme inline {
@@ -12,15 +12,59 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Sidebar */
+.sidebar-dark {
+  background-color: #0f1a2e !important;
+  color: #ffffff !important;
+}
+.sidebar-dark .sidebar-brand {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.sidebar-dark .sidebar-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+.sidebar-dark .sidebar-label {
+  color: #9ca3af;
+}
+.sidebar-dark .sidebar-link {
+  color: #d1d5db;
+}
+.sidebar-dark .sidebar-link:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+.sidebar-dark .sidebar-link-active {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+}
+.sidebar-dark .sidebar-avatar {
+  background-color: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+.sidebar-dark .sidebar-username {
+  color: #ffffff;
+}
+.sidebar-dark .sidebar-role {
+  color: #9ca3af;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }

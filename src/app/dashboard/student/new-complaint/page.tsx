@@ -835,10 +835,22 @@ export default function NewComplaintPage() {
                     />
                   </div>
                   {audio && (
-                    <p className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2 rounded-lg">
-                      <CheckCircle className="h-3.5 w-3.5" />
-                      Audio attached: {audio.name}
-                    </p>
+                    <div className="flex items-center justify-between gap-2 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2 rounded-lg">
+                      <p className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                        <CheckCircle className="h-3.5 w-3.5" />
+                        Audio attached: {audio.name}
+                      </p>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setAudio(null)}
+                        className="h-7 px-2 text-xs text-red-500 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-950/30"
+                      >
+                        <MicOff className="h-3 w-3 mr-1" />
+                        Reset
+                      </Button>
+                    </div>
                   )}
                 </div>
               </CardContent>
@@ -849,7 +861,7 @@ export default function NewComplaintPage() {
               type="submit"
               disabled={loading || !!spamWarning || !!imageWarning || !!duplicateMatch}
               size="lg"
-              className="w-full shadow-sm"
+              className="w-full shadow-sm transition-all duration-200 hover:brightness-125 hover:shadow-lg hover:shadow-primary/25 hover:scale-[1.01] active:scale-[0.99]"
             >
               {loading ? (
                 "Submitting..."

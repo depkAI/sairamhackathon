@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useComplaints, useTasks, useFeedback } from "@/lib/useData";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -10,12 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
-import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { DEMO_USERS } from "@/lib/demo-data";
 import { sendWhatsAppMessage, getWhatsAppPhone } from "@/lib/whatsapp";
 import toast from "react-hot-toast";
 import {
@@ -54,7 +50,6 @@ const FINAL_STEPS = [
 ];
 
 function getStatusSteps(complaintStatus: string, hasQuotation: boolean) {
-  // Include quotation steps only if the complaint went through quotation flow
   const showQuotation = hasQuotation ||
     ["quotation_submitted", "quotation_approved"].includes(complaintStatus);
   if (showQuotation) {
@@ -88,7 +83,7 @@ export default function ComplaintDetailPage() {
               Complaint not found
             </h2>
             <p className="text-sm text-muted-foreground mb-4">
-              This complaint may have been removed or you don't have access.
+              This complaint may have been removed or you don&apos;t have access.
             </p>
             <Button variant="outline">
               <Link href="/dashboard/student">Back to Dashboard</Link>
@@ -150,7 +145,6 @@ export default function ComplaintDetailPage() {
 
           {/* Header Card */}
           <Card className="shadow-sm overflow-hidden">
-            {/* Progress bar at the top */}
             {complaint.status !== "rejected" && complaint.status !== "escalated" && (
               <div className="h-1 bg-muted">
                 <div
@@ -181,7 +175,6 @@ export default function ComplaintDetailPage() {
                 {complaint.description}
               </p>
 
-              {/* Audio Attachment */}
               {complaint.audioAttachment && (
                 <div className="bg-muted/50 rounded-lg p-3 space-y-2">
                   <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -193,7 +186,6 @@ export default function ComplaintDetailPage() {
                 </div>
               )}
 
-              {/* Info Grid */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {[
                   {
@@ -244,7 +236,7 @@ export default function ComplaintDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Status Timeline - Vertical Stepper */}
+          {/* Status Timeline */}
           {complaint.status !== "rejected" && complaint.status !== "escalated" && (
             <Card className="shadow-sm">
               <CardHeader className="pb-2">
@@ -262,7 +254,6 @@ export default function ComplaintDetailPage() {
 
                     return (
                       <div key={step.key} className="flex gap-4 relative">
-                        {/* Vertical line connector */}
                         {!isLast && (
                           <div className="absolute left-[15px] top-[32px] w-0.5 h-[calc(100%-8px)]">
                             <div
@@ -275,7 +266,6 @@ export default function ComplaintDetailPage() {
                           </div>
                         )}
 
-                        {/* Step indicator */}
                         <div className="shrink-0 relative z-10">
                           <div
                             className={`flex h-8 w-8 items-center justify-center rounded-full transition-all ${
@@ -296,7 +286,6 @@ export default function ComplaintDetailPage() {
                           </div>
                         </div>
 
-                        {/* Step content */}
                         <div className={`pb-6 ${isLast ? "pb-0" : ""}`}>
                           <p
                             className={`text-sm font-medium ${
@@ -366,13 +355,11 @@ export default function ComplaintDetailPage() {
                     </p>
                   </div>
                   {(() => {
-                    // Only show WhatsApp when task is not accepted or deadline has passed
                     const isNotAccepted = task.accepted !== true;
                     const isOverdue = new Date(task.deadline).getTime() < Date.now();
                     const canMessage = isNotAccepted || isOverdue;
                     if (!canMessage) return null;
 
-                    // Check if already sent (one-time only per complaint)
                     const storageKey = `whatsapp-sent-${complaint.id}`;
                     const alreadySent = typeof window !== "undefined" && localStorage.getItem(storageKey) === "true";
                     if (alreadySent) {

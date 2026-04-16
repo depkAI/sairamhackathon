@@ -520,6 +520,39 @@ export function useWorkers() {
 }
 
 // ═══════════════════════════════════════════
+// ALL USERS (for admin user management)
+// ═══════════════════════════════════════════
+export function useAllUsers() {
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  useEffect(() => {
+    if (isDemoMode) {
+      setUsers(Object.values(DEMO_USERS));
+      return;
+    }
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("*");
+      if (data) {
+        setUsers(data.map((row) => ({
+          uid: row.id,
+          loginId: row.login_id,
+          name: row.name,
+          email: row.email,
+          role: row.role as UserProfile["role"],
+          department: row.department,
+          phone: row.phone,
+          specialty: row.specialty,
+          mustChangePassword: row.must_change_password,
+          createdAt: new Date(row.created_at),
+        })));
+      }
+    })();
+  }, []);
+  return users;
+}
+
+// ═══════════════════════════════════════════
 // NOTIFY ROLES (dynamic lookup instead of hardcoded UIDs)
 // ═══════════════════════════════════════════
 export async function notifyRole(

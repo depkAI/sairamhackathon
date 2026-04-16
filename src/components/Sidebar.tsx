@@ -16,6 +16,12 @@ import {
   MessageSquare,
   Lightbulb,
   Bell,
+  FileText,
+  Users,
+  Wrench,
+  BarChart3,
+  Megaphone,
+  ClipboardList,
 } from "lucide-react";
 
 interface NavItem {
@@ -29,6 +35,7 @@ const roleNavItems: Record<string, { main: NavItem[]; config: NavItem[] }> = {
     main: [
       { label: "Dashboard", href: "/dashboard/student", icon: <LayoutDashboard size={20} /> },
       { label: "Report Issue", href: "/dashboard/student/new-complaint", icon: <PlusCircle size={20} /> },
+      { label: "Live Tracking", href: "/dashboard/student/live", icon: <BarChart3 size={20} /> },
       { label: "My Feedback", href: "/dashboard/student/feedback", icon: <MessageSquare size={20} /> },
       { label: "Submit Idea", href: "/dashboard/student/ideas", icon: <Lightbulb size={20} /> },
       { label: "Notifications", href: "/dashboard/student/notifications", icon: <Bell size={20} /> },
@@ -41,6 +48,12 @@ const roleNavItems: Record<string, { main: NavItem[]; config: NavItem[] }> = {
   admin: {
     main: [
       { label: "Dashboard", href: "/dashboard/admin", icon: <LayoutDashboard size={20} /> },
+      { label: "Complaints", href: "/dashboard/admin/complaints", icon: <ClipboardList size={20} /> },
+      { label: "Workers", href: "/dashboard/admin/workers", icon: <Wrench size={20} /> },
+      { label: "Ideas", href: "/dashboard/admin/ideas", icon: <Lightbulb size={20} /> },
+      { label: "Users", href: "/dashboard/admin/users", icon: <Users size={20} /> },
+      { label: "Analytics", href: "/dashboard/admin/analytics", icon: <BarChart3 size={20} /> },
+      { label: "Announcements", href: "/dashboard/admin/announcements", icon: <Megaphone size={20} /> },
     ],
     config: [
       { label: "Profile", href: "/profile", icon: <User size={20} /> },
@@ -50,6 +63,10 @@ const roleNavItems: Record<string, { main: NavItem[]; config: NavItem[] }> = {
   hod: {
     main: [
       { label: "Dashboard", href: "/dashboard/hod", icon: <LayoutDashboard size={20} /> },
+      { label: "Complaints", href: "/dashboard/hod/complaints", icon: <ClipboardList size={20} /> },
+      { label: "Live Tracking", href: "/dashboard/hod/live", icon: <BarChart3 size={20} /> },
+      { label: "Ideas", href: "/dashboard/hod/ideas", icon: <Lightbulb size={20} /> },
+      { label: "Announcements", href: "/dashboard/hod/announcements", icon: <Megaphone size={20} /> },
     ],
     config: [
       { label: "Profile", href: "/profile", icon: <User size={20} /> },
@@ -59,6 +76,9 @@ const roleNavItems: Record<string, { main: NavItem[]; config: NavItem[] }> = {
   worker: {
     main: [
       { label: "Dashboard", href: "/dashboard/worker", icon: <LayoutDashboard size={20} /> },
+      { label: "Active Tasks", href: "/dashboard/worker/tasks", icon: <ClipboardList size={20} /> },
+      { label: "Completed", href: "/dashboard/worker/completed", icon: <Settings size={20} /> },
+      { label: "Quotations", href: "/dashboard/worker/quotations", icon: <FileText size={20} /> },
     ],
     config: [
       { label: "Profile", href: "/profile", icon: <User size={20} /> },
@@ -95,7 +115,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
       {/* Logo */}
       <div className="flex h-16 items-center gap-3 px-6">
         <Link
-          href={`/dashboard/${profile.role}`}
+          href="/"
           className="flex items-center gap-3 no-underline"
           onClick={onClose}
         >

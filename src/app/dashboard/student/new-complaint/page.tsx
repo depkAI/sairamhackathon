@@ -3,8 +3,8 @@
 import { useState, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import { addComplaint, useComplaints, notifyRole } from "@/lib/useData";
-import { Category, Priority, DEPARTMENTS, LOCATIONS } from "@/lib/types";
+import { addComplaint, useComplaints, notifyRole, useWorkers, addTask, updateComplaint, addNotification } from "@/lib/useData";
+import { Category, Priority, DEPARTMENTS, LOCATIONS, Complaint, UserProfile } from "@/lib/types";
 import DashboardLayout from "@/components/DashboardLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +38,10 @@ import {
   Building,
   Tag,
   Paperclip,
+  Copy,
+  Wrench,
+  UserCheck,
+  Sparkles,
 } from "lucide-react";
 
 const CATEGORIES: { value: Category; label: string }[] = [
@@ -123,10 +127,104 @@ function detectSpam(
   return { isSpam: false, reason: "" };
 }
 
+// ── Smart duplicate detection using word-overlap similarity ──
+function tokenize(text: string): Set<string> {
+  return new Set(
+    text.toLowerCase().replace(/[^a-z0-9\s]/g, "").split(/\s+/).filter((w) => w.length > 2)
+  );
+}
+
+function similarity(a: string, b: string): number {
+  const setA = tokenize(a);
+  const setB = tokenize(b);
+  if (setA.size === 0 || setB.size === 0) return 0;
+  let overlap = 0;
+  for (const word of setA) {
+    if (setB.has(word)) overlap++;
+  }
+  return overlap / Math.max(setA.size, setB.size);
+}
+
+function findSimilarComplaint(
+  title: string,
+  description: string,
+  existing: Complaint[]
+): Complaint | null {
+  const inputText = `${title} ${description}`;
+  const active = existing.filter(
+    (c) => !["completed", "verified", "rejected"].includes(c.status)
+  );
+  let bestMatch: Complaint | null = null;
+  let bestScore = 0;
+  for (const c of active) {
+    const candidateText = `${c.title} ${c.description}`;
+    const titleSim = similarity(title, c.title);
+    const fullSim = similarity(inputText, candidateText);
+    // weighted: title match matters more
+    const score = titleSim * 0.6 + fullSim * 0.4;
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = c;
+    }
+  }
+  // threshold: 0.45 = strong enough overlap to flag
+  return bestScore >= 0.45 ? bestMatch : null;
+}
+
+// ── Auto-suggest worker by category → specialty mapping ──
+const CATEGORY_SPECIALTY_MAP: Record<Category, string[]> = {
+  electrical: ["electrician", "technician"],
+  plumbing: ["plumber", "technician"],
+  furniture: ["technician", "general"],
+  network: ["technician", "general"],
+  cleaning: ["general", "technician"],
+  civil: ["general", "technician"],
+  other: ["general", "technician"],
+};
+
+function suggestWorker(
+  category: Category,
+  title: string,
+  description: string,
+  workers: UserProfile[]
+): UserProfile | null {
+  const text = `${title} ${description}`.toLowerCase();
+  const preferredSpecialties = CATEGORY_SPECIALTY_MAP[category] || ["general"];
+
+  // keyword boost: check description for specialty hints
+  const keywordMap: Record<string, string> = {
+    electrician: "wire|switch|power|voltage|circuit|fan|light|socket|electrical|fuse|short",
+    plumber: "pipe|water|leak|tap|drain|flush|toilet|plumb|sewage|tank",
+    technician: "projector|computer|network|wifi|server|printer|ac|air condition|camera|cctv",
+  };
+
+  let bestWorker: UserProfile | null = null;
+  let bestPriority = Infinity;
+
+  for (const worker of workers) {
+    const spec = worker.specialty || "general";
+    let priority = preferredSpecialties.indexOf(spec);
+    if (priority === -1) priority = 99;
+
+    // check if description keywords match this worker's specialty
+    const pattern = keywordMap[spec];
+    if (pattern && new RegExp(pattern).test(text)) {
+      priority = Math.min(priority, 0); // boost to top
+    }
+
+    if (priority < bestPriority) {
+      bestPriority = priority;
+      bestWorker = worker;
+    }
+  }
+  return bestWorker;
+}
+
 export default function NewComplaintPage() {
   const { profile } = useAuth();
   const router = useRouter();
   const existingComplaints = useComplaints();
+  const workers = useWorkers();
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -140,6 +238,8 @@ export default function NewComplaintPage() {
   const [audio, setAudio] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [duplicateWarning, setDuplicateWarning] = useState("");
+  const [duplicateMatch, setDuplicateMatch] = useState<Complaint | null>(null);
+  const [suggestedWorker, setSuggestedWorker] = useState<UserProfile | null>(null);
   const [spamWarning, setSpamWarning] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -155,22 +255,41 @@ export default function NewComplaintPage() {
         const spam = detectSpam(updated.title, updated.description);
         setSpamWarning(spam.isSpam ? spam.reason : "");
       }
+      // Re-check duplicate & worker suggestion on title/description/category change
+      if (["title", "description", "category"].includes(field)) {
+        setTimeout(() => {
+          checkDuplicateSmart(updated.title, updated.description, updated.category);
+        }, 300);
+      }
       return updated;
     });
   };
 
+  const checkDuplicateSmart = (title: string, desc: string, category: Category) => {
+    // Smart similarity-based duplicate detection
+    if (title.length < 3 && desc.length < 5) {
+      setDuplicateWarning("");
+      setDuplicateMatch(null);
+      setSuggestedWorker(null);
+      return;
+    }
+    const dup = findSimilarComplaint(title, desc, existingComplaints);
+    if (dup) {
+      setDuplicateMatch(dup);
+      setDuplicateWarning(
+        `This issue has already been reported: "${dup.title}" (${dup.status.replace("_", " ")})`
+      );
+    } else {
+      setDuplicateMatch(null);
+      setDuplicateWarning("");
+    }
+    // Auto-suggest worker based on category + description
+    const worker = suggestWorker(category, title, desc, workers);
+    setSuggestedWorker(worker);
+  };
+
   const checkDuplicate = () => {
-    const dup = existingComplaints.find(
-      (c) =>
-        c.location === form.location &&
-        c.category === form.category &&
-        !["completed", "verified", "rejected"].includes(c.status)
-    );
-    setDuplicateWarning(
-      dup
-        ? `Similar active complaint: "${dup.title}" at ${dup.location}`
-        : ""
-    );
+    checkDuplicateSmart(form.title, form.description, form.category);
   };
 
   const startRecording = async () => {
@@ -214,6 +333,11 @@ export default function NewComplaintPage() {
       toast.error(spam.reason);
       return;
     }
+    // Block if duplicate found
+    if (duplicateMatch) {
+      toast.error("This issue has already been reported. Check the existing complaint.");
+      return;
+    }
     setLoading(true);
     try {
       // Convert audio to data URL for demo mode / upload to storage in production
@@ -227,7 +351,7 @@ export default function NewComplaintPage() {
         });
       }
 
-      await addComplaint({
+      const complaintId = await addComplaint({
         ...form,
         attachments: [],
         audioAttachment: audioUrl || undefined,
@@ -238,6 +362,8 @@ export default function NewComplaintPage() {
         updatedAt: new Date(),
         isSpam: false,
       });
+
+      // Notify HOD & admin
       await notifyRole(
         "hod",
         "New Complaint",
@@ -251,7 +377,44 @@ export default function NewComplaintPage() {
         `${profile.name} reported: ${form.title}`,
         "/dashboard/admin"
       );
-      toast.success("Complaint submitted!");
+
+      // Auto-assign suggested worker if available
+      if (suggestedWorker) {
+        await updateComplaint(complaintId, {
+          status: "assigned",
+          assignedTo: suggestedWorker.uid,
+          assignedToName: suggestedWorker.name,
+        });
+        const deadline = new Date();
+        deadline.setHours(deadline.getHours() + 48);
+        await addTask({
+          complaintId,
+          complaintTitle: form.title,
+          workerId: suggestedWorker.uid,
+          workerName: suggestedWorker.name,
+          accepted: null,
+          deadline,
+          status: "assigned",
+          completionProof: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+        await addNotification(
+          suggestedWorker.uid,
+          "New Task Auto-Assigned",
+          `You have been auto-assigned: "${form.title}" based on your specialty.`,
+          "/dashboard/worker"
+        );
+        await addNotification(
+          profile.uid,
+          "Worker Auto-Assigned",
+          `${suggestedWorker.name} (${suggestedWorker.specialty || "general"}) has been automatically assigned to your complaint.`,
+          "/dashboard/student"
+        );
+        toast.success(`Submitted & auto-assigned to ${suggestedWorker.name}!`);
+      } else {
+        toast.success("Complaint submitted!");
+      }
       router.push("/dashboard/student");
     } catch {
       toast.error("Failed to submit");
@@ -318,14 +481,51 @@ export default function NewComplaintPage() {
               <AlertDescription>{spamWarning}</AlertDescription>
             </Alert>
           )}
-          {duplicateWarning && (
-            <Alert className="animate-in fade-in slide-in-from-top-2 duration-300 border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-950/20">
-              <AlertTriangle className="h-4 w-4 text-amber-600" />
-              <AlertTitle className="text-amber-800 dark:text-amber-300">
-                Possible Duplicate
+          {duplicateMatch && (
+            <Alert className="animate-in fade-in slide-in-from-top-2 duration-300 border-red-300 dark:border-red-700 bg-red-50/50 dark:bg-red-950/20">
+              <Copy className="h-4 w-4 text-red-600 dark:text-red-400" />
+              <AlertTitle className="text-red-800 dark:text-red-300">
+                Already Reported
               </AlertTitle>
-              <AlertDescription className="text-amber-700 dark:text-amber-400">
-                {duplicateWarning}
+              <AlertDescription className="text-red-700 dark:text-red-400 space-y-2">
+                <p>{duplicateWarning}</p>
+                <div className="flex items-center gap-3 mt-2 p-2.5 rounded-lg bg-red-100/50 dark:bg-red-950/30 border border-red-200/60 dark:border-red-800/40">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm text-red-900 dark:text-red-200 truncate">{duplicateMatch.title}</p>
+                    <div className="flex items-center gap-2 mt-1 text-xs text-red-600 dark:text-red-400">
+                      <span className="capitalize px-1.5 py-0.5 rounded bg-red-200/50 dark:bg-red-900/40 font-medium">{duplicateMatch.status.replace("_", " ")}</span>
+                      <span>{duplicateMatch.location}</span>
+                      {duplicateMatch.assignedToName && <span>Assigned to {duplicateMatch.assignedToName}</span>}
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs mt-1">Please track the existing complaint instead of submitting a new one.</p>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Auto-suggested worker */}
+          {suggestedWorker && !duplicateMatch && form.title.length >= 3 && (
+            <Alert className="animate-in fade-in slide-in-from-top-2 duration-300 border-cyan-300 dark:border-cyan-700 bg-cyan-50/50 dark:bg-cyan-950/20">
+              <Sparkles className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
+              <AlertTitle className="text-cyan-800 dark:text-cyan-300 flex items-center gap-1.5">
+                <UserCheck className="h-3.5 w-3.5" />
+                Smart Worker Match
+              </AlertTitle>
+              <AlertDescription className="text-cyan-700 dark:text-cyan-400">
+                <div className="flex items-center gap-3 mt-2 p-2.5 rounded-lg bg-cyan-100/50 dark:bg-cyan-950/30 border border-cyan-200/60 dark:border-cyan-800/40">
+                  <div className="flex items-center justify-center h-9 w-9 rounded-lg bg-cyan-200/50 dark:bg-cyan-900/40 text-cyan-600 dark:text-cyan-400 shrink-0">
+                    <Wrench className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm text-cyan-900 dark:text-cyan-200">{suggestedWorker.name}</p>
+                    <p className="text-xs text-cyan-600 dark:text-cyan-400 capitalize">{suggestedWorker.specialty || "General"} specialist</p>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] border-cyan-300 dark:border-cyan-700 text-cyan-700 dark:text-cyan-300 shrink-0">
+                    Auto-assign
+                  </Badge>
+                </div>
+                <p className="text-xs mt-2">This worker will be automatically assigned when you submit based on the issue category and description.</p>
               </AlertDescription>
             </Alert>
           )}
@@ -614,12 +814,22 @@ export default function NewComplaintPage() {
             {/* Submit */}
             <Button
               type="submit"
-              disabled={loading || !!spamWarning || !!imageWarning}
+              disabled={loading || !!spamWarning || !!imageWarning || !!duplicateMatch}
               size="lg"
               className="w-full shadow-sm"
             >
               {loading ? (
                 "Submitting..."
+              ) : duplicateMatch ? (
+                <>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Already Reported — Cannot Submit
+                </>
+              ) : suggestedWorker ? (
+                <>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Submit & Auto-Assign to {suggestedWorker.name}
+                </>
               ) : (
                 <>
                   <Send className="mr-2 h-4 w-4" />

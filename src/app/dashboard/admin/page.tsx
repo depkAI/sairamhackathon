@@ -18,7 +18,6 @@ import DashboardLayout from "@/components/DashboardLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import StatusBadge from "@/components/StatusBadge";
 
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -47,7 +46,6 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Alert } from "@/components/ui/alert";
 import toast from "react-hot-toast";
 import {
   BarChart3,
@@ -65,8 +63,11 @@ import {
   Building,
   Activity,
   Timer,
-  MoreVertical,
   Lightbulb,
+  ArrowUpRight,
+  ArrowDownRight,
+  ChevronRight,
+  Shield,
 } from "lucide-react";
 import MouseGlowCard from "@/components/effects/MouseGlowCard";
 
@@ -81,6 +82,7 @@ export default function AdminDashboard() {
   const [assignModal, setAssignModal] = useState<string | null>(null);
   const [selectedWorker, setSelectedWorker] = useState("");
   const [filterMonth, setFilterMonth] = useState<string>("all");
+  const [showAllComplaints, setShowAllComplaints] = useState(false);
 
   const filteredComplaints = filterMonth === "all" ? complaints : complaints.filter((c) => {
     const d = new Date(c.createdAt);
@@ -92,19 +94,15 @@ export default function AdminDashboard() {
   }))).sort().reverse();
 
   const total = filteredComplaints.length;
-  const solved = filteredComplaints.filter(
-    (c) => c.status === "completed" || c.status === "verified"
-  ).length;
-  const unsolved = filteredComplaints.filter(
-    (c) => !["completed", "verified", "rejected"].includes(c.status)
-  ).length;
+  const solved = filteredComplaints.filter((c) => c.status === "completed" || c.status === "verified").length;
+  const unsolved = filteredComplaints.filter((c) => !["completed", "verified", "rejected"].includes(c.status)).length;
   const rejected = filteredComplaints.filter((c) => c.status === "rejected").length;
-  const delayed = tasks.filter(
-    (t) => t.status !== "completed" && new Date(t.deadline) < new Date()
-  ).length;
+  const delayed = tasks.filter((t) => t.status !== "completed" && new Date(t.deadline) < new Date()).length;
   const pending = complaints.filter((c) => c.status === "pending").length;
   const inProgress = complaints.filter((c) => c.status === "in_progress").length;
+  const resolutionPct = total > 0 ? Math.round((solved / total) * 100) : 0;
 
+  // Department breakdown
   const deptCounts: Record<string, { total: number; solved: number; unsolved: number }> = {};
   filteredComplaints.forEach((c) => {
     if (!deptCounts[c.department]) deptCounts[c.department] = { total: 0, solved: 0, unsolved: 0 };
@@ -113,6 +111,7 @@ export default function AdminDashboard() {
     else if (c.status !== "rejected") deptCounts[c.department].unsolved++;
   });
 
+  // Category breakdown
   const catCounts: Record<string, { total: number; solved: number }> = {};
   filteredComplaints.forEach((c) => {
     if (!catCounts[c.category]) catCounts[c.category] = { total: 0, solved: 0 };
@@ -120,6 +119,7 @@ export default function AdminDashboard() {
     if (c.status === "completed" || c.status === "verified") catCounts[c.category].solved++;
   });
 
+  // Worker stats
   const workerStats = workers.map((w) => {
     const wTasks = tasks.filter((t) => t.workerId === w.uid);
     const done = wTasks.filter((t) => t.status === "completed").length;
@@ -129,16 +129,15 @@ export default function AdminDashboard() {
     return { ...w, completed: done, totalTasks: wTasks.length, avgRating: avg, overdue };
   });
 
-  const liveComplaints = filteredComplaints
-    .filter((c) => !["completed", "verified", "rejected"].includes(c.status))
-    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-
+  // Recent / active
+  const recentComplaints = [...complaints].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   const quotationTasks = tasks.filter((t) => t.status === "quotation_submitted");
   const completedTasks = tasks.filter((t) => {
     const comp = complaints.find((c) => c.id === t.complaintId);
     return t.status === "completed" && comp?.status === "completed";
   });
 
+  // Actions
   const assignWorker = async () => {
     if (!assignModal || !selectedWorker || !profile) return;
     const worker = workers.find((w) => w.uid === selectedWorker);
@@ -182,197 +181,195 @@ export default function AdminDashboard() {
     } catch { toast.error("Failed"); }
   };
 
-  const resolutionPct = total > 0 ? Math.round((solved / total) * 100) : 0;
-
   const kpiCards = [
-    { label: "Total Complaints", value: total, icon: BarChart3, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30" },
-    { label: "Solved", value: solved, icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950/30" },
-    { label: "Unsolved", value: unsolved, icon: Clock, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/30" },
-    { label: "Rejected", value: rejected, icon: XCircle, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/30" },
-    { label: "Overdue", value: delayed, icon: AlertCircle, color: "text-orange-600", bg: "bg-orange-50 dark:bg-orange-950/30" },
+    { label: "Total Complaints", value: total, icon: FileText, color: "text-blue-600", bg: "bg-blue-50 dark:bg-blue-950/30", glow: "icon-glow-blue", change: total > 0 ? `+${total}` : "0", up: true },
+    { label: "Resolved", value: solved, icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-950/30", glow: "icon-glow-emerald", change: `${resolutionPct}%`, up: true },
+    { label: "In Progress", value: unsolved, icon: Clock, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/30", glow: "icon-glow-amber", change: `${unsolved}`, up: false },
+    { label: "Workers", value: workers.length, icon: Users, color: "text-indigo-600", bg: "bg-indigo-50 dark:bg-indigo-950/30", glow: "icon-glow-indigo", change: `${workers.length} active`, up: true },
+    { label: "Overdue", value: delayed, icon: AlertCircle, color: "text-red-600", bg: "bg-red-50 dark:bg-red-950/30", glow: "icon-glow-red", change: delayed > 0 ? `${delayed} tasks` : "None", up: false },
   ];
+
+  const displayedComplaints = showAllComplaints ? recentComplaints : recentComplaints.slice(0, 5);
 
   return (
     <ProtectedRoute allowedRoles={["admin"]}>
       <DashboardLayout>
-        <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
-          {/* Month Filter */}
-          <div className="flex items-center gap-3">
-            <Select value={filterMonth} onValueChange={(v) => { if (v) setFilterMonth(v); }}>
-              <SelectTrigger className="w-[180px] h-9 text-sm rounded-lg">
-                <SelectValue placeholder="Filter by month" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Time</SelectItem>
-                {monthOptions.map((m) => {
-                  const [y, mo] = m.split("-");
-                  const label = new Date(Number(y), Number(mo) - 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
-                  return <SelectItem key={m} value={m}>{label}</SelectItem>;
-                })}
-              </SelectContent>
-            </Select>
-            {filterMonth !== "all" && (
-              <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => setFilterMonth("all")}>Clear</Button>
-            )}
+        <div className="max-w-7xl mx-auto space-y-8 animate-fade-in">
+
+          {/* ── Row 1: KPI Cards ── */}
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+            {kpiCards.map((kpi, i) => {
+              const Icon = kpi.icon;
+              return (
+                <MouseGlowCard
+                  key={kpi.label}
+                  className="rounded-2xl border border-border bg-card shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 animate-scale-in"
+                >
+                  <div className="p-5" style={{ animationDelay: `${i * 50}ms` }}>
+                    <div className="flex items-center justify-between mb-4">
+                      <p className="text-sm font-medium text-muted-foreground">{kpi.label}</p>
+                      <div className={`h-9 w-9 rounded-xl ${kpi.bg} ${kpi.glow} flex items-center justify-center transition-shadow duration-300`}>
+                        <Icon className={`h-4.5 w-4.5 ${kpi.color}`} />
+                      </div>
+                    </div>
+                    <p className="text-3xl font-bold tracking-tight text-foreground">{kpi.value}</p>
+                    <div className="flex items-center gap-1 mt-1.5">
+                      {kpi.up ? (
+                        <ArrowUpRight className="h-3.5 w-3.5 text-emerald-500" />
+                      ) : (
+                        <ArrowDownRight className="h-3.5 w-3.5 text-amber-500" />
+                      )}
+                      <span className={`text-xs font-medium ${kpi.up ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
+                        {kpi.change}
+                      </span>
+                    </div>
+                  </div>
+                </MouseGlowCard>
+              );
+            })}
           </div>
 
-          <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="inline-flex h-10 rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm p-1">
-              <TabsTrigger value="overview" className="gap-2 text-sm rounded-lg px-4">
-                <BarChart3 className="h-3.5 w-3.5" /> Overview
-              </TabsTrigger>
-              <TabsTrigger value="complaints" className="gap-2 text-sm rounded-lg px-4">
-                <FileText className="h-3.5 w-3.5" /> Complaints
-              </TabsTrigger>
-              <TabsTrigger value="tasks" className="gap-2 text-sm rounded-lg px-4">
-                <Wrench className="h-3.5 w-3.5" /> Tasks
-              </TabsTrigger>
-              <TabsTrigger value="live" className="gap-2 text-sm rounded-lg px-4">
-                <Activity className="h-3.5 w-3.5" /> Live
-              </TabsTrigger>
-              <TabsTrigger value="analytics" className="gap-2 text-sm rounded-lg px-4">
-                <TrendingUp className="h-3.5 w-3.5" /> Analytics
-              </TabsTrigger>
-              <TabsTrigger value="ideas" className="gap-2 text-sm rounded-lg px-4">
-                <Lightbulb className="h-3.5 w-3.5" /> Ideas {hodApprovedIdeas.length > 0 && <Badge variant="destructive" className="ml-1 h-5 min-w-5 text-[10px] px-1.5">{hodApprovedIdeas.length}</Badge>}
-              </TabsTrigger>
-            </TabsList>
+          {/* ── Row 2: Resolution Chart + Category Breakdown ── */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Resolution Progress (2/3 width) */}
+            <Card className="lg:col-span-2 rounded-2xl border-border shadow-sm">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base font-semibold">Resolution Progress</CardTitle>
+                    <CardDescription className="text-sm mt-0.5">{solved} resolved of {total} total complaints</CardDescription>
+                  </div>
+                  <Select value={filterMonth} onValueChange={(v) => { if (v) setFilterMonth(v); }}>
+                    <SelectTrigger className="w-[160px] h-8 text-xs rounded-lg">
+                      <SelectValue placeholder="All Time" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Time</SelectItem>
+                      {monthOptions.map((m) => {
+                        const [y, mo] = m.split("-");
+                        const label = new Date(Number(y), Number(mo) - 1).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+                        return <SelectItem key={m} value={m}>{label}</SelectItem>;
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-4 space-y-6">
+                {/* Big percentage + bar */}
+                <div className="flex items-end gap-6">
+                  <div>
+                    <p className="text-5xl font-bold tracking-tight text-foreground">{resolutionPct}%</p>
+                    <p className="text-sm text-muted-foreground mt-1">resolution rate</p>
+                  </div>
+                  <div className="flex-1 space-y-3">
+                    <Progress value={resolutionPct} className="h-3 rounded-full" />
+                    <div className="flex gap-6 text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                        <span className="text-muted-foreground">Solved <span className="font-semibold text-foreground">{solved}</span></span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                        <span className="text-muted-foreground">In Progress <span className="font-semibold text-foreground">{inProgress}</span></span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-gray-600" />
+                        <span className="text-muted-foreground">Pending <span className="font-semibold text-foreground">{pending}</span></span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                        <span className="text-muted-foreground">Rejected <span className="font-semibold text-foreground">{rejected}</span></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-            {/* OVERVIEW */}
-            <TabsContent value="overview" className="space-y-6">
-              {/* KPI Cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-                {kpiCards.map((kpi, i) => {
-                  const Icon = kpi.icon;
-                  return (
-                    <MouseGlowCard
-                      key={kpi.label}
-                      className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-card shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 animate-scale-in"
-                      glowColor={`${kpi.color.includes("blue") ? "rgba(59,130,246,0.08)" : kpi.color.includes("emerald") ? "rgba(16,185,129,0.08)" : kpi.color.includes("amber") ? "rgba(245,158,11,0.08)" : kpi.color.includes("red") ? "rgba(239,68,68,0.08)" : "rgba(99,102,241,0.08)"}`}
-                    >
-                      <div className="p-6" style={{ animationDelay: `${i * 60}ms` }}>
-                        <div className="flex items-center justify-between mb-3">
-                          <div className={`h-10 w-10 rounded-xl ${kpi.bg} flex items-center justify-center`}>
-                            <Icon className={`h-5 w-5 ${kpi.color}`} />
+                {/* Mini stat cards row */}
+                <div className="grid grid-cols-4 gap-3">
+                  {[
+                    { label: "Avg Response", value: "<2hr", icon: Timer, bg: "bg-blue-50 dark:bg-blue-950/20" },
+                    { label: "Active Workers", value: workers.length, icon: Users, bg: "bg-indigo-50 dark:bg-indigo-950/20" },
+                    { label: "Quotations", value: quotationTasks.length, icon: FileText, bg: "bg-amber-50 dark:bg-amber-950/20" },
+                    { label: "Verify Queue", value: completedTasks.length, icon: Shield, bg: "bg-emerald-50 dark:bg-emerald-950/20" },
+                  ].map((s) => {
+                    const SIcon = s.icon;
+                    return (
+                      <div key={s.label} className={`${s.bg} rounded-xl p-3 text-center`}>
+                        <SIcon className="h-4 w-4 mx-auto text-muted-foreground mb-1.5" />
+                        <p className="text-lg font-bold text-foreground">{s.value}</p>
+                        <p className="text-[11px] text-muted-foreground">{s.label}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Category Breakdown (1/3 width) */}
+            <Card className="rounded-2xl border-border shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <Wrench className="h-4 w-4 text-primary" /> Categories
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {Object.keys(catCounts).length === 0 ? (
+                  <p className="text-center py-8 text-sm text-muted-foreground">No data yet</p>
+                ) : (
+                  <div className="space-y-4">
+                    {Object.entries(catCounts).sort((a, b) => b[1].total - a[1].total).map(([cat, d]) => {
+                      const pct = total > 0 ? Math.round((d.total / total) * 100) : 0;
+                      return (
+                        <div key={cat}>
+                          <div className="flex items-center justify-between text-sm mb-1.5">
+                            <span className="font-medium capitalize text-foreground">{cat}</span>
+                            <span className="text-muted-foreground font-mono text-xs">{d.total} ({pct}%)</span>
+                          </div>
+                          <div className="h-2 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-primary/70 rounded-full transition-all duration-500"
+                              style={{ width: `${pct}%` }}
+                            />
                           </div>
                         </div>
-                        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{kpi.value}</p>
-                        <p className="text-xs font-medium text-gray-400 dark:text-gray-500 mt-0.5">{kpi.label}</p>
-                      </div>
-                    </MouseGlowCard>
-                  );
-                })}
-              </div>
-
-              {/* Resolution Progress */}
-              <Card className="rounded-2xl border-gray-100 dark:border-gray-800 shadow-sm">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100">Resolution Progress</CardTitle>
-                  <CardDescription className="text-sm">{solved} solved of {total} total</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center gap-4">
-                    <Progress value={resolutionPct} className="h-2.5 flex-1 rounded-full" />
-                    <span className="text-base font-bold text-gray-900 dark:text-gray-100 min-w-[3rem] text-right">{resolutionPct}%</span>
+                      );
+                    })}
                   </div>
-                  <div className="flex flex-wrap gap-5 text-sm">
-                    <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-emerald-50 dark:bg-emerald-950/300" /><span className="text-gray-500 dark:text-gray-400">Solved ({solved})</span></div>
-                    <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-amber-50 dark:bg-amber-950/300" /><span className="text-gray-500 dark:text-gray-400">In Progress ({inProgress})</span></div>
-                    <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-gray-300" /><span className="text-gray-500 dark:text-gray-400">Pending ({pending})</span></div>
-                  </div>
-                </CardContent>
-              </Card>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
-              {/* Department & Category */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <Card className="rounded-2xl border-gray-100 dark:border-gray-800 shadow-sm">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                      <Building className="h-4 w-4 text-blue-500" /> Department Breakdown
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ScrollArea className="max-h-[280px]">
-                      <div className="space-y-4">
-                        {Object.entries(deptCounts).sort((a, b) => b[1].total - a[1].total).map(([dept, d]) => (
-                          <div key={dept} className="space-y-1.5">
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="font-medium text-gray-700 dark:text-gray-300">{dept}</span>
-                              <div className="flex gap-2">
-                                <Badge variant="secondary" className="text-xs font-normal rounded-md">{d.solved} solved</Badge>
-                                <Badge variant="outline" className="text-xs font-normal rounded-md">{d.unsolved} open</Badge>
-                              </div>
-                            </div>
-                            <Progress value={d.total > 0 ? (d.solved / d.total) * 100 : 0} className="h-1.5 rounded-full" />
-                          </div>
-                        ))}
-                        {Object.keys(deptCounts).length === 0 && (
-                          <div className="flex flex-col items-center py-8 text-gray-400 dark:text-gray-500">
-                            <Building className="h-8 w-8 mb-2 opacity-40" />
-                            <p className="text-sm">No department data yet</p>
-                          </div>
-                        )}
-                      </div>
-                    </ScrollArea>
-                  </CardContent>
-                </Card>
-
-                <Card className="rounded-2xl border-gray-100 dark:border-gray-800 shadow-sm">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                      <Wrench className="h-4 w-4 text-purple-500" /> Category Breakdown
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ScrollArea className="max-h-[280px]">
-                      <div className="space-y-4">
-                        {Object.entries(catCounts).sort((a, b) => b[1].total - a[1].total).map(([cat, d]) => (
-                          <div key={cat} className="space-y-1.5">
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="font-medium text-gray-700 dark:text-gray-300 capitalize">{cat}</span>
-                              <div className="flex gap-2">
-                                <Badge variant="secondary" className="text-xs font-normal rounded-md">{d.solved} solved</Badge>
-                                <Badge variant="outline" className="text-xs font-normal rounded-md">{d.total - d.solved} open</Badge>
-                              </div>
-                            </div>
-                            <Progress value={d.total > 0 ? (d.solved / d.total) * 100 : 0} className="h-1.5 rounded-full" />
-                          </div>
-                        ))}
-                        {Object.keys(catCounts).length === 0 && (
-                          <div className="flex flex-col items-center py-8 text-gray-400 dark:text-gray-500">
-                            <Wrench className="h-8 w-8 mb-2 opacity-40" />
-                            <p className="text-sm">No category data yet</p>
-                          </div>
-                        )}
-                      </div>
-                    </ScrollArea>
-                  </CardContent>
-                </Card>
-              </div>
-
+          {/* ── Row 3: Action Items (Quotations + Verifications) ── */}
+          {(quotationTasks.length > 0 || completedTasks.length > 0) && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Pending Quotations */}
               {quotationTasks.length > 0 && (
-                <Card className="rounded-2xl border-amber-100 shadow-sm">
+                <Card className="rounded-2xl border-border shadow-sm">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4 text-amber-500" /> Pending Quotation Approvals
-                    </CardTitle>
-                    <CardDescription className="text-sm">{quotationTasks.length} awaiting review</CardDescription>
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                        <AlertCircle className="h-4 w-4 text-amber-600" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-sm font-semibold">Quotation Approvals</CardTitle>
+                        <CardDescription className="text-xs">{quotationTasks.length} awaiting review</CardDescription>
+                      </div>
+                    </div>
                   </CardHeader>
-                  <CardContent className="space-y-2.5">
+                  <CardContent className="space-y-2">
                     {quotationTasks.map((t) => (
-                      <div key={t.id} className="flex items-center justify-between gap-4 p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/30/60 border border-amber-100">
-                        <div className="min-w-0">
-                          <p className="font-medium text-sm text-gray-800 dark:text-gray-200">{t.complaintTitle}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Worker: {t.workerName} &middot; &#8377;{t.quotationAmount}</p>
-                          {t.quotationNote && <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{t.quotationNote}</p>}
+                      <div key={t.id} className="flex items-center justify-between gap-3 p-3 rounded-xl bg-muted/40 border border-border">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-sm text-foreground truncate">{t.complaintTitle}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{t.workerName} &middot; ₹{t.quotationAmount}</p>
                         </div>
-                        <div className="flex gap-2 shrink-0">
-                          <Button size="sm" variant="outline" className="text-emerald-600 border-emerald-200 hover:bg-emerald-50 dark:bg-emerald-950/30 h-8 text-sm rounded-lg" onClick={() => handleQuotation(t.id, true)}>
-                            <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Approve
+                        <div className="flex gap-1.5 shrink-0">
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-lg" onClick={() => handleQuotation(t.id, true)}>
+                            <CheckCircle2 className="h-4 w-4" />
                           </Button>
-                          <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 dark:bg-red-950/30 h-8 text-sm rounded-lg" onClick={() => handleQuotation(t.id, false)}>
-                            <XCircle className="h-3.5 w-3.5 mr-1" /> Reject
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg" onClick={() => handleQuotation(t.id, false)}>
+                            <XCircle className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>
@@ -383,22 +380,26 @@ export default function AdminDashboard() {
 
               {/* Pending Verification */}
               {completedTasks.length > 0 && (
-                <Card className="rounded-2xl border-emerald-100 shadow-sm">
+                <Card className="rounded-2xl border-border shadow-sm">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                      <UserCheck className="h-4 w-4 text-emerald-500" /> Pending Verification
-                    </CardTitle>
-                    <CardDescription className="text-sm">{completedTasks.length} awaiting verification</CardDescription>
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                        <UserCheck className="h-4 w-4 text-emerald-600" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-sm font-semibold">Pending Verification</CardTitle>
+                        <CardDescription className="text-xs">{completedTasks.length} awaiting verification</CardDescription>
+                      </div>
+                    </div>
                   </CardHeader>
-                  <CardContent className="space-y-2.5">
+                  <CardContent className="space-y-2">
                     {completedTasks.map((t) => (
-                      <div key={t.id} className="flex items-center justify-between gap-4 p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30/60 border border-emerald-100">
-                        <div className="min-w-0">
-                          <p className="font-medium text-sm text-gray-800 dark:text-gray-200">{t.complaintTitle}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Worker: {t.workerName}</p>
-                          {t.notes && <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{t.notes}</p>}
+                      <div key={t.id} className="flex items-center justify-between gap-3 p-3 rounded-xl bg-muted/40 border border-border">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-sm text-foreground truncate">{t.complaintTitle}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{t.workerName}</p>
                         </div>
-                        <Button size="sm" className="h-8 text-sm rounded-lg" onClick={() => verifyCompletion(t.id, t.complaintId)}>
+                        <Button size="sm" className="h-7 text-xs rounded-lg px-3" onClick={() => verifyCompletion(t.id, t.complaintId)}>
                           <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Verify
                         </Button>
                       </div>
@@ -406,339 +407,225 @@ export default function AdminDashboard() {
                   </CardContent>
                 </Card>
               )}
-            </TabsContent>
+            </div>
+          )}
 
-            {/* COMPLAINTS */}
-            <TabsContent value="complaints" className="space-y-4">
-              {complaints.length === 0 ? (
-                <Card className="rounded-2xl border-gray-100 dark:border-gray-800">
-                  <CardContent className="flex flex-col items-center justify-center py-16">
-                    <FileText className="h-10 w-10 text-gray-300 dark:text-gray-600 mb-3" />
-                    <p className="text-base font-medium text-gray-500 dark:text-gray-400">No complaints yet</p>
-                    <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Complaints will appear here once submitted</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                complaints.map((c) => (
-                  <Card key={c.id} className="rounded-2xl border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow">
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-2 flex-wrap">
-                            <h3 className="font-semibold text-base text-gray-900 dark:text-gray-100">{c.title}</h3>
-                            <StatusBadge status={c.status} />
-                            <Badge variant={c.priority === "critical" ? "destructive" : "secondary"} className="text-xs capitalize rounded-md">{c.priority}</Badge>
-                          </div>
-                          <p className="text-gray-500 dark:text-gray-400 text-sm mb-3 line-clamp-2 leading-relaxed">{c.description}</p>
-                          {c.audioAttachment && (
-                            <div className="mb-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-2">
-                              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1">Voice Note</p>
-                              <audio controls className="w-full h-7">
-                                <source src={c.audioAttachment} />
-                              </audio>
+          {/* ── Row 4: Department Breakdown + Worker Performance ── */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Department Breakdown */}
+            <Card className="rounded-2xl border-border shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <Building className="h-4 w-4 text-primary" /> Department Breakdown
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="max-h-[300px]">
+                  <div className="space-y-4">
+                    {Object.entries(deptCounts).sort((a, b) => b[1].total - a[1].total).map(([dept, d]) => {
+                      const pct = d.total > 0 ? Math.round((d.solved / d.total) * 100) : 0;
+                      return (
+                        <div key={dept}>
+                          <div className="flex items-center justify-between text-sm mb-1.5">
+                            <span className="font-medium text-foreground">{dept}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-emerald-600 font-medium">{d.solved} solved</span>
+                              <span className="text-xs text-muted-foreground">{d.unsolved} open</span>
                             </div>
-                          )}
-                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400 dark:text-gray-500">
-                            <span className="flex items-center gap-1"><Users className="h-3 w-3" />{c.createdByName}</span>
-                            <span className="flex items-center gap-1"><Building className="h-3 w-3" />{c.department}</span>
-                            <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{c.location}</span>
-                            <span className="flex items-center gap-1 capitalize"><Wrench className="h-3 w-3" />{c.category}</span>
-                            {c.assignedToName && <span className="flex items-center gap-1"><UserCheck className="h-3 w-3" />{c.assignedToName}</span>}
+                          </div>
+                          <div className="h-2 bg-muted rounded-full overflow-hidden">
+                            <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
                           </div>
                         </div>
-                        {(c.status === "pending" || c.status === "reviewed") && (
-                          <Button size="sm" onClick={() => setAssignModal(c.id)} className="shrink-0 h-8 text-sm rounded-lg">
-                            <Users className="mr-1.5 h-3.5 w-3.5" /> Assign
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </TabsContent>
-
-            {/* TASKS */}
-            <TabsContent value="tasks" className="space-y-4">
-              {tasks.length === 0 ? (
-                <Card className="rounded-2xl border-gray-100 dark:border-gray-800">
-                  <CardContent className="flex flex-col items-center justify-center py-16">
-                    <Wrench className="h-10 w-10 text-gray-300 dark:text-gray-600 mb-3" />
-                    <p className="text-base font-medium text-gray-500 dark:text-gray-400">No tasks yet</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card className="rounded-2xl border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base font-semibold">All Tasks</CardTitle>
-                    <CardDescription className="text-sm">{tasks.length} total &middot; {delayed} overdue</CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="text-xs">
-                          <TableHead className="text-xs">Complaint</TableHead>
-                          <TableHead className="text-xs">Worker</TableHead>
-                          <TableHead className="text-xs">Status</TableHead>
-                          <TableHead className="text-xs">Deadline</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {tasks.map((t) => {
-                          const isOverdue = new Date(t.deadline) < new Date() && t.status !== "completed";
-                          return (
-                            <TableRow key={t.id} className={isOverdue ? "bg-red-50 dark:bg-red-950/30/50" : ""}>
-                              <TableCell className="text-sm">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="font-medium text-gray-800 dark:text-gray-200">{t.complaintTitle}</span>
-                                  {isOverdue && <Badge variant="destructive" className="text-xs rounded-md">OVERDUE</Badge>}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <Avatar className="h-6 w-6">
-                                    <AvatarFallback className="text-xs bg-blue-50 dark:bg-blue-950/30 text-blue-600 font-medium">{t.workerName.charAt(0)}</AvatarFallback>
-                                  </Avatar>
-                                  <span className="text-sm text-gray-700 dark:text-gray-300">{t.workerName}</span>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant={t.status === "completed" ? "secondary" : "outline"} className="capitalize text-xs rounded-md">{t.status.replace(/_/g, " ")}</Badge>
-                              </TableCell>
-                              <TableCell>
-                                <span className={`text-xs flex items-center gap-1 ${isOverdue ? "text-red-600 font-medium" : "text-gray-400 dark:text-gray-500"}`}>
-                                  <Timer className="h-3 w-3" />{new Date(t.deadline).toLocaleString()}
-                                </span>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
-
-            {/* LIVE */}
-            <TabsContent value="live" className="space-y-4">
-              <Card className="rounded-2xl border-gray-100 dark:border-gray-800 shadow-sm">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-blue-500 animate-pulse" /> Active Issues
-                  </CardTitle>
-                  <CardDescription className="text-sm">{liveComplaints.length} currently active</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {liveComplaints.length === 0 ? (
-                    <div className="flex flex-col items-center py-12">
-                      <CheckCircle2 className="h-10 w-10 text-emerald-300 mb-3" />
-                      <p className="text-base font-medium text-gray-700 dark:text-gray-300">All clear!</p>
-                      <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">No active issues</p>
-                    </div>
-                  ) : (
-                    <ScrollArea className="max-h-[500px]">
-                      <div className="space-y-2.5">
-                        {liveComplaints.map((c) => {
-                          const task = tasks.find((t) => t.complaintId === c.id && t.status !== "rejected");
-                          const isOverdue = task && new Date(task.deadline) < new Date() && task.status !== "completed";
-                          return (
-                            <div key={c.id} className={`p-4 rounded-xl border transition-colors ${isOverdue ? "border-red-200 bg-red-50 dark:bg-red-950/30/50" : "border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50/50"}`}>
-                              <div className="flex items-start justify-between gap-4">
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                                    <span className="font-semibold text-sm text-gray-800 dark:text-gray-200">{c.title}</span>
-                                    <StatusBadge status={c.status} />
-                                    {isOverdue && <Badge variant="destructive" className="text-xs rounded-md">OVERDUE</Badge>}
-                                  </div>
-                                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-400 dark:text-gray-500 mt-1">
-                                    <span className="flex items-center gap-1"><Building className="h-3 w-3" />{c.department}</span>
-                                    <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{c.location}</span>
-                                    <span className="flex items-center gap-1 capitalize"><Wrench className="h-3 w-3" />{c.category}</span>
-                                    {c.assignedToName && <span className="flex items-center gap-1"><Users className="h-3 w-3" />{c.assignedToName}</span>}
-                                    <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{new Date(c.updatedAt).toLocaleString()}</span>
-                                  </div>
-                                </div>
-                                {(c.status === "pending" || c.status === "reviewed") && (
-                                  <Button size="sm" variant="outline" className="h-8 text-sm rounded-lg" onClick={() => setAssignModal(c.id)}>Assign</Button>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </ScrollArea>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* ANALYTICS */}
-            <TabsContent value="analytics" className="space-y-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[
-                  { label: "Total Complaints", val: total, bg: "bg-blue-50 dark:bg-blue-950/30", text: "text-blue-700" },
-                  { label: "Resolved", val: solved, bg: "bg-emerald-50 dark:bg-emerald-950/30", text: "text-emerald-700" },
-                  { label: "Resolution Rate", val: `${resolutionPct}%`, bg: "bg-amber-50 dark:bg-amber-950/30", text: "text-amber-700" },
-                  { label: "Overdue", val: delayed, bg: "bg-red-50 dark:bg-red-950/30", text: "text-red-700" },
-                ].map((s, i) => (
-                  <Card key={i} className={`${s.bg} border-none rounded-2xl shadow-sm`}>
-                    <CardContent className="p-5 text-center">
-                      <div className={`text-2xl font-bold ${s.text}`}>{s.val}</div>
-                      <p className="text-xs mt-1 text-gray-500 dark:text-gray-400">{s.label}</p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              <Card className="rounded-2xl border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <Users className="h-4 w-4 text-blue-500" /> Worker Performance
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  {workerStats.length === 0 ? (
-                    <div className="flex flex-col items-center py-12">
-                      <Users className="h-8 w-8 text-gray-300 dark:text-gray-600 mb-2" />
-                      <p className="text-sm text-gray-400 dark:text-gray-500">No worker data</p>
-                    </div>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="text-xs">Worker</TableHead>
-                          <TableHead className="text-center text-xs">Tasks</TableHead>
-                          <TableHead className="text-center text-xs">Done</TableHead>
-                          <TableHead className="text-center text-xs">Overdue</TableHead>
-                          <TableHead className="text-center text-xs">Rating</TableHead>
-                          <TableHead className="text-center text-xs">Rate</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {workerStats.map((w) => (
-                          <TableRow key={w.uid}>
-                            <TableCell>
-                              <div className="flex items-center gap-2.5">
-                                <Avatar className="h-7 w-7">
-                                  <AvatarFallback className="bg-blue-50 dark:bg-blue-950/30 text-blue-600 text-xs font-semibold">{w.name.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                  <p className="font-medium text-sm text-gray-800 dark:text-gray-200">{w.name}</p>
-                                  <p className="text-xs text-gray-400 dark:text-gray-500 capitalize">{w.specialty || w.department}</p>
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-center text-sm">{w.totalTasks}</TableCell>
-                            <TableCell className="text-center text-sm text-emerald-600 font-medium">{w.completed}</TableCell>
-                            <TableCell className="text-center">
-                              {w.overdue > 0 ? <Badge variant="destructive" className="text-xs rounded-md">{w.overdue}</Badge> : <span className="text-gray-400 dark:text-gray-500 text-sm">0</span>}
-                            </TableCell>
-                            <TableCell className="text-center">
-                              {w.avgRating > 0 ? (
-                                <span className="inline-flex items-center gap-1 text-sm">
-                                  <Star className="h-3 w-3 text-amber-400 fill-amber-400" />{w.avgRating.toFixed(1)}
-                                </span>
-                              ) : <span className="text-gray-400 dark:text-gray-500 text-sm">--</span>}
-                            </TableCell>
-                            <TableCell className="text-center font-medium text-sm">
-                              {w.totalTasks > 0 ? Math.round((w.completed / w.totalTasks) * 100) : 0}%
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card className="rounded-2xl border-gray-100 dark:border-gray-800 shadow-sm">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base font-semibold">Priority Distribution</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {(["critical", "high", "medium", "low"] as const).map((p) => {
-                      const count = complaints.filter((c) => c.priority === p).length;
-                      const cfg = {
-                        critical: { bg: "bg-red-50 dark:bg-red-950/30", text: "text-red-700", border: "border-red-100" },
-                        high: { bg: "bg-amber-50 dark:bg-amber-950/30", text: "text-amber-700", border: "border-amber-100" },
-                        medium: { bg: "bg-blue-50 dark:bg-blue-950/30", text: "text-blue-700", border: "border-blue-100" },
-                        low: { bg: "bg-emerald-50 dark:bg-emerald-950/30", text: "text-emerald-700", border: "border-emerald-100" },
-                      };
-                      const c = cfg[p];
-                      return (
-                        <Card key={p} className={`${c.bg} ${c.border} rounded-xl`}>
-                          <CardContent className="p-4 text-center">
-                            <div className={`text-2xl font-bold ${c.text}`}>{count}</div>
-                            <p className="text-xs capitalize mt-1 text-gray-500 dark:text-gray-400">{p}</p>
-                          </CardContent>
-                        </Card>
                       );
                     })}
+                    {Object.keys(deptCounts).length === 0 && (
+                      <div className="flex flex-col items-center py-8 text-muted-foreground">
+                        <Building className="h-8 w-8 mb-2 opacity-40" />
+                        <p className="text-sm">No department data yet</p>
+                      </div>
+                    )}
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                </ScrollArea>
+              </CardContent>
+            </Card>
 
-            {/* IDEAS */}
-            <TabsContent value="ideas" className="space-y-4">
-              {ideas.length === 0 ? (
-                <Card className="rounded-2xl border-dashed border-gray-200 dark:border-gray-700">
-                  <CardContent className="flex flex-col items-center py-16">
-                    <Lightbulb className="h-10 w-10 text-amber-300 mb-3" />
-                    <p className="text-sm font-medium text-gray-500">No ideas submitted yet</p>
-                  </CardContent>
-                </Card>
+            {/* Worker Performance */}
+            <Card className="rounded-2xl border-border shadow-sm overflow-hidden">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <Users className="h-4 w-4 text-primary" /> Worker Performance
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {workerStats.length === 0 ? (
+                  <div className="flex flex-col items-center py-12 text-muted-foreground">
+                    <Users className="h-8 w-8 mb-2 opacity-40" />
+                    <p className="text-sm">No worker data</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs">Worker</TableHead>
+                        <TableHead className="text-center text-xs">Tasks</TableHead>
+                        <TableHead className="text-center text-xs">Done</TableHead>
+                        <TableHead className="text-center text-xs">Rating</TableHead>
+                        <TableHead className="text-center text-xs">Rate</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {workerStats.map((w) => (
+                        <TableRow key={w.uid}>
+                          <TableCell>
+                            <div className="flex items-center gap-2.5">
+                              <Avatar className="h-7 w-7">
+                                <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">{w.name.charAt(0)}</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="font-medium text-sm">{w.name}</p>
+                                <p className="text-xs text-muted-foreground capitalize">{w.specialty || w.department}</p>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center text-sm">{w.totalTasks}</TableCell>
+                          <TableCell className="text-center text-sm text-emerald-600 font-medium">{w.completed}</TableCell>
+                          <TableCell className="text-center">
+                            {w.avgRating > 0 ? (
+                              <span className="inline-flex items-center gap-1 text-sm">
+                                <Star className="h-3 w-3 text-amber-400 fill-amber-400" />{w.avgRating.toFixed(1)}
+                              </span>
+                            ) : <span className="text-muted-foreground text-sm">--</span>}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant={w.totalTasks > 0 && (w.completed / w.totalTasks) >= 0.7 ? "default" : "secondary"} className="text-xs font-mono">
+                              {w.totalTasks > 0 ? Math.round((w.completed / w.totalTasks) * 100) : 0}%
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* ── Row 5: Ideas (if any HOD-approved) ── */}
+          {hodApprovedIdeas.length > 0 && (
+            <Card className="rounded-2xl border-border shadow-sm border-l-4 border-l-amber-400">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                    <Lightbulb className="h-4 w-4 text-amber-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-sm font-semibold">Ideas Awaiting Admin Approval</CardTitle>
+                    <CardDescription className="text-xs">{hodApprovedIdeas.length} approved by HOD, need your review</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {hodApprovedIdeas.map((idea) => (
+                  <div key={idea.id} className="flex items-start justify-between gap-3 p-3 rounded-xl bg-muted/40 border border-border">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm text-foreground">{idea.title}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{idea.description}</p>
+                      <p className="text-xs text-muted-foreground mt-1">by {idea.createdByName} &middot; {idea.department}</p>
+                    </div>
+                    <div className="flex gap-1.5 shrink-0">
+                      <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg" onClick={async () => {
+                        await updateIdea(idea.id, { status: "rejected", rejectionReason: "Not feasible at this time.", adminReviewedBy: profile?.uid, adminReviewedByName: profile?.name });
+                        await addNotification(idea.createdBy, "Idea Rejected by Admin", `Your idea "${idea.title}" was not approved.`, "/dashboard/student/ideas");
+                        toast.success("Rejected");
+                      }}>
+                        <XCircle className="h-3.5 w-3.5 mr-1" /> Reject
+                      </Button>
+                      <Button size="sm" className="h-7 px-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg" onClick={async () => {
+                        await updateIdea(idea.id, { status: "approved_by_admin", adminReviewedBy: profile?.uid, adminReviewedByName: profile?.name });
+                        await addNotification(idea.createdBy, "Idea Approved!", `Your idea "${idea.title}" has been approved!`, "/dashboard/student/ideas");
+                        toast.success("Approved!");
+                      }}>
+                        <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Approve
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* ── Row 6: Recent Complaints Table ── */}
+          <Card className="rounded-2xl border-border shadow-sm overflow-hidden">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base font-semibold">Recent Complaints</CardTitle>
+                  <CardDescription className="text-sm">{complaints.length} total complaints</CardDescription>
+                </div>
+                <Button variant="ghost" size="sm" className="text-xs gap-1" onClick={() => setShowAllComplaints(!showAllComplaints)}>
+                  {showAllComplaints ? "Show Less" : "View All"} <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {complaints.length === 0 ? (
+                <div className="flex flex-col items-center py-16 text-muted-foreground">
+                  <FileText className="h-10 w-10 mb-3 opacity-40" />
+                  <p className="text-sm font-medium">No complaints yet</p>
+                </div>
               ) : (
-                <div className="space-y-3">
-                  {ideas.map((idea) => (
-                    <Card key={idea.id} className="rounded-2xl border-gray-100 dark:border-gray-800 shadow-sm">
-                      <CardContent className="p-5">
-                        <div className="flex items-start justify-between gap-3 mb-2">
-                          <div>
-                            <h3 className="font-semibold text-foreground">{idea.title}</h3>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              by {idea.createdByName} &middot; {idea.department} &middot; {new Date(idea.createdAt).toLocaleDateString()}
-                              {idea.hodReviewedByName && <span className="text-emerald-600"> &middot; HOD: {idea.hodReviewedByName}</span>}
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Complaint</TableHead>
+                      <TableHead className="text-xs">Status</TableHead>
+                      <TableHead className="text-xs hidden md:table-cell">Department</TableHead>
+                      <TableHead className="text-xs hidden lg:table-cell">Priority</TableHead>
+                      <TableHead className="text-xs hidden lg:table-cell">Date</TableHead>
+                      <TableHead className="text-xs text-right">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {displayedComplaints.map((c) => (
+                      <TableRow key={c.id} className="group">
+                        <TableCell>
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm text-foreground truncate max-w-[250px]">{c.title}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />{c.location}
+                              {c.assignedToName && <><span className="mx-1">&middot;</span><UserCheck className="h-3 w-3" />{c.assignedToName}</>}
                             </p>
                           </div>
-                          <Badge variant={idea.status === "approved_by_hod" ? "default" : idea.status === "approved_by_admin" ? "secondary" : idea.status === "rejected" ? "destructive" : "outline"} className="text-xs capitalize shrink-0">
-                            {idea.status.replace(/_/g, " ")}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground leading-relaxed mb-3">{idea.description}</p>
-                        {idea.status === "approved_by_hod" && (
-                          <div className="flex gap-2 justify-end">
-                            <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50 h-8 text-xs" onClick={async () => {
-                              await updateIdea(idea.id, { status: "rejected", rejectionReason: "Not feasible at this time.", adminReviewedBy: profile?.uid, adminReviewedByName: profile?.name });
-                              await addNotification(idea.createdBy, "Idea Rejected by Admin", `Your idea "${idea.title}" was not approved by admin.`, "/dashboard/student/ideas");
-                              toast.success("Idea rejected");
-                            }}>
-                              <XCircle className="h-3.5 w-3.5 mr-1" /> Reject
+                        </TableCell>
+                        <TableCell><StatusBadge status={c.status} /></TableCell>
+                        <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{c.department}</TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          <Badge variant={c.priority === "critical" ? "destructive" : "secondary"} className="text-xs capitalize">{c.priority}</Badge>
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">
+                          {new Date(c.createdAt).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {(c.status === "pending" || c.status === "reviewed") && (
+                            <Button size="sm" variant="outline" className="h-7 text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setAssignModal(c.id)}>
+                              Assign
                             </Button>
-                            <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 text-xs" onClick={async () => {
-                              await updateIdea(idea.id, { status: "approved_by_admin", adminReviewedBy: profile?.uid, adminReviewedByName: profile?.name });
-                              await addNotification(idea.createdBy, "Idea Approved!", `Your idea "${idea.title}" has been approved by admin! It will be implemented.`, "/dashboard/student/ideas");
-                              toast.success("Idea approved!");
-                            }}>
-                              <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Approve
-                            </Button>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               )}
-            </TabsContent>
-          </Tabs>
+            </CardContent>
+          </Card>
 
-          {/* Assign Dialog */}
+          {/* ── Assign Worker Dialog ── */}
           <Dialog open={!!assignModal} onOpenChange={(open) => { if (!open) { setAssignModal(null); setSelectedWorker(""); } }}>
             <DialogContent className="sm:max-w-md rounded-2xl">
               <DialogHeader>
-                <DialogTitle className="text-[16px]">Assign Worker</DialogTitle>
+                <DialogTitle>Assign Worker</DialogTitle>
               </DialogHeader>
               <div className="py-4">
                 <Select value={selectedWorker} onValueChange={(v) => setSelectedWorker(v ?? "")}>
@@ -750,7 +637,7 @@ export default function AdminDashboard() {
                       <SelectItem key={w.uid} value={w.uid} className="text-sm">
                         <div className="flex items-center gap-2">
                           <Avatar className="h-5 w-5">
-                            <AvatarFallback className="text-xs bg-blue-50 dark:bg-blue-950/30 text-blue-600">{w.name.charAt(0)}</AvatarFallback>
+                            <AvatarFallback className="text-xs bg-primary/10 text-primary">{w.name.charAt(0)}</AvatarFallback>
                           </Avatar>
                           {w.name} ({w.specialty || w.department})
                         </div>

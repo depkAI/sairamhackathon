@@ -98,6 +98,7 @@ export default function StudentDashboard() {
       icon: FileText,
       gradient: "from-violet-500/10 to-purple-500/5",
       iconBg: "bg-violet-500/15 text-violet-600 dark:text-violet-400",
+      glow: "icon-glow-purple",
     },
     {
       label: "In Progress",
@@ -105,6 +106,7 @@ export default function StudentDashboard() {
       icon: Clock,
       gradient: "from-amber-500/10 to-orange-500/5",
       iconBg: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+      glow: "icon-glow-amber",
     },
     {
       label: "Resolved",
@@ -112,6 +114,7 @@ export default function StudentDashboard() {
       icon: CheckCircle2,
       gradient: "from-emerald-500/10 to-green-500/5",
       iconBg: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+      glow: "icon-glow-emerald",
     },
   ];
 
@@ -148,7 +151,7 @@ export default function StudentDashboard() {
                 >
                   <div className="p-5 flex items-center gap-4" style={{ animationDelay: `${i * 80}ms` }}>
                     <div
-                      className={`flex h-12 w-12 items-center justify-center rounded-xl ${s.iconBg} shrink-0`}
+                      className={`flex h-12 w-12 items-center justify-center rounded-xl ${s.iconBg} ${s.glow} shrink-0 transition-shadow duration-300`}
                     >
                       <Icon className="h-5 w-5" />
                     </div>

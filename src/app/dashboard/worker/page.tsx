@@ -1,19 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTasks, updateTask, updateComplaint, addNotification } from "@/lib/useData";
 import DashboardLayout from "@/components/DashboardLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import toast from "react-hot-toast";
-import { CheckCircle2, XCircle, Clock, Upload, FileText, AlertTriangle } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Upload, FileText, AlertTriangle, Timer, Wrench, Zap } from "lucide-react";
 
-function getTimeRemaining(deadline: Date): string {
-  const diff = new Date(deadline).getTime() - Date.now();
-  if (diff <= 0) return "OVERDUE";
+function getTimeRemaining(deadline: Date): { text: string; percent: number; overdue: boolean } {
+  const now = Date.now();
+  const dl = new Date(deadline).getTime();
+  const total48h = 48 * 60 * 60 * 1000;
+  const diff = dl - now;
+  if (diff <= 0) return { text: "OVERDUE", percent: 100, overdue: true };
   const hours = Math.floor(diff / (1000 * 60 * 60));
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  return `${hours}h ${minutes}m remaining`;
+  const elapsed = total48h - diff;
+  const percent = Math.min(100, Math.max(0, (elapsed / total48h) * 100));
+  return { text: `${hours}h ${minutes}m left`, percent, overdue: false };
 }
 
 export default function WorkerDashboard() {
@@ -24,16 +36,35 @@ export default function WorkerDashboard() {
   const [quotationNote, setQuotationNote] = useState("");
   const [completionModal, setCompletionModal] = useState<string | null>(null);
   const [completionNotes, setCompletionNotes] = useState("");
-  const [proofFiles, setProofFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
+  const [, setTick] = useState(0);
+
+  // Auto-refresh timer display every minute
+  useEffect(() => {
+    const interval = setInterval(() => setTick((t) => t + 1), 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Auto-escalate: if accepted but not completed within deadline, mark as escalated
+  useEffect(() => {
+    tasks.forEach(async (t) => {
+      if ((t.status === "accepted" || t.status === "in_progress") && new Date(t.deadline) < new Date()) {
+        try {
+          await updateTask(t.id, { status: "escalated" });
+          await updateComplaint(t.complaintId, { status: "escalated", escalatedAt: new Date() });
+          await addNotification("admin-001", "Task Auto-Escalated", `Task "${t.complaintTitle}" by ${t.workerName} missed the 48hr deadline.`, "/dashboard/admin");
+        } catch { /* already escalated */ }
+      }
+    });
+  }, [tasks]);
 
   const acceptTask = async (taskId: string) => {
     const task = tasks.find((t) => t.id === taskId);
     try {
       await updateTask(taskId, { accepted: true, status: "accepted" });
       if (task) await updateComplaint(task.complaintId, { status: "in_progress" });
-      toast.success("Task accepted!");
-    } catch { toast.error("Action failed"); }
+      toast.success("Task accepted! 48-hour timer started.");
+    } catch { toast.error("Failed"); }
   };
 
   const rejectTask = async (taskId: string) => {
@@ -41,9 +72,9 @@ export default function WorkerDashboard() {
     try {
       await updateTask(taskId, { accepted: false, status: "rejected" });
       if (task) await updateComplaint(task.complaintId, { status: "reviewed", assignedTo: undefined, assignedToName: undefined });
-      await addNotification("demo-admin", "Task Rejected", `${profile?.name} rejected: ${task?.complaintTitle}. Needs reassignment.`, "/dashboard/admin");
+      await addNotification("admin-001", "Task Rejected", `${profile?.name} rejected: ${task?.complaintTitle}`, "/dashboard/admin");
       toast.success("Task rejected");
-    } catch { toast.error("Action failed"); }
+    } catch { toast.error("Failed"); }
   };
 
   const submitQuotation = async () => {
@@ -52,12 +83,10 @@ export default function WorkerDashboard() {
     try {
       await updateTask(quotationModal, { quotationAmount: parseFloat(quotationAmount), quotationNote, status: "quotation_submitted" });
       if (task) await updateComplaint(task.complaintId, { status: "quotation_submitted" });
-      await addNotification("demo-admin", "Quotation Submitted", `${profile?.name} submitted ₹${quotationAmount} for "${task?.complaintTitle}"`, "/dashboard/admin");
-      toast.success("Quotation submitted!");
-      setQuotationModal(null);
-      setQuotationAmount("");
-      setQuotationNote("");
-    } catch { toast.error("Submission failed"); }
+      await addNotification("admin-001", "Quotation Submitted", `${profile?.name} submitted ₹${quotationAmount} for "${task?.complaintTitle}"`, "/dashboard/admin");
+      toast.success("Quotation sent to admin!");
+      setQuotationModal(null); setQuotationAmount(""); setQuotationNote("");
+    } catch { toast.error("Failed"); }
   };
 
   const submitCompletion = async () => {
@@ -65,149 +94,174 @@ export default function WorkerDashboard() {
     setLoading(true);
     const task = tasks.find((t) => t.id === completionModal);
     try {
-      // In demo mode, skip file upload
       await updateTask(completionModal, { status: "completed", completionProof: [], notes: completionNotes });
       if (task) await updateComplaint(task.complaintId, { status: "completed" });
-      await addNotification("demo-admin", "Task Completed", `${profile?.name} completed: "${task?.complaintTitle}". Needs verification.`, "/dashboard/admin");
-      toast.success("Completion submitted!");
-      setCompletionModal(null);
-      setCompletionNotes("");
-      setProofFiles([]);
-    } catch { toast.error("Submission failed"); }
+      await addNotification("admin-001", "Task Completed", `${profile?.name} completed: "${task?.complaintTitle}". Needs verification.`, "/dashboard/admin");
+      toast.success("Task submitted for verification!");
+      setCompletionModal(null); setCompletionNotes("");
+    } catch { toast.error("Failed"); }
     finally { setLoading(false); }
   };
 
-  const activeTasks = tasks.filter((t) => t.status !== "completed" && t.status !== "rejected");
+  const activeTasks = tasks.filter((t) => !["completed", "rejected"].includes(t.status));
   const completedTasks = tasks.filter((t) => t.status === "completed");
 
   return (
     <ProtectedRoute allowedRoles={["worker"]}>
       <DashboardLayout>
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-2xl font-bold text-gray-900 mb-6">My Tasks</h1>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-              <div className="text-sm text-gray-500 mb-1">Total Tasks</div>
-              <div className="text-3xl font-bold text-gray-900">{tasks.length}</div>
-            </div>
-            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-              <div className="text-sm text-gray-500 mb-1">Active</div>
-              <div className="text-3xl font-bold text-yellow-600">{activeTasks.length}</div>
-            </div>
-            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-              <div className="text-sm text-gray-500 mb-1">Completed</div>
-              <div className="text-3xl font-bold text-green-600">{completedTasks.length}</div>
-            </div>
+        <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">My Tasks</h1>
+            <p className="text-muted-foreground mt-1">Manage assigned maintenance work</p>
           </div>
 
-          <h2 className="font-semibold text-lg mb-4 text-gray-900">Active Tasks</h2>
-          <div className="space-y-4 mb-8">
-            {activeTasks.length === 0 && <div className="text-center py-8 bg-white rounded-xl border border-gray-100 text-gray-500">No active tasks.</div>}
-            {activeTasks.map((t) => {
-              const timeLeft = getTimeRemaining(t.deadline);
-              const isOverdue = timeLeft === "OVERDUE";
-              return (
-                <div key={t.id} className={`bg-white rounded-xl shadow-sm border p-5 ${isOverdue ? "border-red-200 bg-red-50/50" : "border-gray-100"}`}>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 mb-1">{t.complaintTitle}</h3>
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className={`text-xs px-2 py-0.5 rounded-full border ${
-                          t.status === "assigned" ? "bg-yellow-100 text-yellow-700 border-yellow-200" :
-                          t.status === "accepted" ? "bg-green-100 text-green-700 border-green-200" :
-                          t.status === "in_progress" ? "bg-yellow-100 text-yellow-700 border-yellow-200" :
-                          t.status === "quotation_submitted" ? "bg-blue-100 text-blue-700 border-blue-200" :
-                          "bg-gray-100 text-gray-700 border-gray-200"
-                        }`}>{t.status.replace(/_/g, " ")}</span>
-                        <span className={`flex items-center gap-1 text-xs ${isOverdue ? "text-red-600 font-bold" : "text-gray-500"}`}>
-                          {isOverdue ? <AlertTriangle size={12} /> : <Clock size={12} />}{timeLeft}
-                        </span>
+          {/* Stats */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {[
+              { label: "Total Tasks", value: tasks.length, icon: <Wrench className="h-5 w-5" />, color: "text-blue-600 bg-blue-50", border: "border-l-blue-500" },
+              { label: "Active", value: activeTasks.length, icon: <Zap className="h-5 w-5" />, color: "text-amber-600 bg-amber-50", border: "border-l-amber-500" },
+              { label: "Completed", value: completedTasks.length, icon: <CheckCircle2 className="h-5 w-5" />, color: "text-emerald-600 bg-emerald-50", border: "border-l-emerald-500" },
+            ].map((s, i) => (
+              <Card key={i} className={`border-l-4 ${s.border} card-hover`}>
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl ${s.color} flex items-center justify-center shrink-0`}>{s.icon}</div>
+                  <div><p className="text-xs text-muted-foreground">{s.label}</p><p className="text-2xl font-bold">{s.value}</p></div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Active Tasks */}
+          <div>
+            <h2 className="font-semibold text-lg mb-3 flex items-center gap-2"><Zap className="h-5 w-5 text-amber-500" /> Active Tasks</h2>
+            <div className="space-y-3">
+              {activeTasks.length === 0 && <Card className="border-dashed"><CardContent className="py-12 text-center text-muted-foreground">No active tasks. Enjoy the break!</CardContent></Card>}
+              {activeTasks.map((t) => {
+                const time = getTimeRemaining(t.deadline);
+                return (
+                  <Card key={t.id} className={`card-hover ${time.overdue ? "border-red-200" : ""}`}>
+                    <CardContent className="p-5">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-foreground mb-2">{t.complaintTitle}</h3>
+
+                          <div className="flex items-center gap-2 mb-3 flex-wrap">
+                            <Badge variant={
+                              t.status === "assigned" ? "outline" :
+                              t.status === "escalated" ? "destructive" :
+                              t.status === "quotation_submitted" ? "secondary" : "default"
+                            } className="text-[10px] capitalize">{t.status.replace(/_/g, " ")}</Badge>
+                            {t.quotationApproved === false && t.status === "assigned" && (
+                              <Badge variant="destructive" className="text-[10px]">Quotation Rejected</Badge>
+                            )}
+                          </div>
+
+                          {/* 48hr Timer */}
+                          <div className={`p-3 rounded-lg border ${time.overdue ? "bg-red-50 border-red-200" : "bg-muted/50"}`}>
+                            <div className="flex items-center justify-between text-sm mb-1.5">
+                              <span className="flex items-center gap-1.5">
+                                {time.overdue ? <AlertTriangle className="h-4 w-4 text-red-500" /> : <Timer className="h-4 w-4 text-muted-foreground" />}
+                                <span className={time.overdue ? "text-red-600 font-bold" : "text-muted-foreground"}>
+                                  {time.text}
+                                </span>
+                              </span>
+                              <span className="text-xs text-muted-foreground">48hr limit</span>
+                            </div>
+                            <Progress value={time.percent} className={`h-2 ${time.overdue ? "[&>div]:bg-red-500" : ""}`} />
+                            {time.overdue && (
+                              <p className="text-xs text-red-600 mt-1.5 font-medium">⚠ Auto-escalated to admin. Task will be reassigned.</p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-2 shrink-0">
+                          {t.status === "assigned" && t.accepted === null && (
+                            <>
+                              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => acceptTask(t.id)}><CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Accept</Button>
+                              <Button size="sm" variant="outline" className="text-red-600 border-red-200" onClick={() => rejectTask(t.id)}><XCircle className="mr-1 h-3.5 w-3.5" /> Reject</Button>
+                            </>
+                          )}
+                          {(t.status === "accepted" || t.status === "in_progress" || (t.status === "assigned" && t.quotationApproved === false)) && (
+                            <Button size="sm" variant="outline" onClick={() => setQuotationModal(t.id)}>
+                              <FileText className="mr-1 h-3.5 w-3.5" /> Quotation
+                            </Button>
+                          )}
+                          {(t.status === "accepted" || t.status === "in_progress" || t.quotationApproved === true) && !time.overdue && (
+                            <Button size="sm" onClick={() => setCompletionModal(t.id)}>
+                              <Upload className="mr-1 h-3.5 w-3.5" /> Submit
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                      {t.quotationApproved === false && t.status === "assigned" && (
-                        <div className="text-xs text-red-600 mb-2">Quotation was rejected. Please revise.</div>
-                      )}
-                    </div>
-                    <div className="flex gap-2 ml-4 flex-wrap justify-end">
-                      {t.status === "assigned" && t.accepted === null && (
-                        <>
-                          <button onClick={() => acceptTask(t.id)} className="p-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200"><CheckCircle2 size={18} /></button>
-                          <button onClick={() => rejectTask(t.id)} className="p-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200"><XCircle size={18} /></button>
-                        </>
-                      )}
-                      {(t.status === "accepted" || t.status === "in_progress" || (t.status === "assigned" && t.quotationApproved === false)) && (
-                        <button onClick={() => setQuotationModal(t.id)} className="flex items-center gap-1 text-sm bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 shadow-sm">
-                          <FileText size={14} /> Quotation
-                        </button>
-                      )}
-                      {(t.status === "accepted" || t.status === "in_progress" || t.quotationApproved === true) && (
-                        <button onClick={() => setCompletionModal(t.id)} className="flex items-center gap-1 text-sm bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 shadow-sm">
-                          <Upload size={14} /> Complete
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
           </div>
 
+          {/* Completed */}
           {completedTasks.length > 0 && (
-            <>
-              <h2 className="font-semibold text-lg mb-4 text-gray-900">Completed Tasks</h2>
-              <div className="space-y-3">
+            <div>
+              <h2 className="font-semibold text-lg mb-3 flex items-center gap-2"><CheckCircle2 className="h-5 w-5 text-emerald-500" /> Completed ({completedTasks.length})</h2>
+              <div className="space-y-2">
                 {completedTasks.map((t) => (
-                  <div key={t.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 opacity-80">
-                    <div className="flex items-center gap-3">
-                      <CheckCircle2 size={18} className="text-green-500" />
-                      <span className="font-medium text-gray-800">{t.complaintTitle}</span>
-                      {t.notes && <span className="text-xs text-gray-400">— {t.notes}</span>}
-                    </div>
-                  </div>
+                  <Card key={t.id} className="opacity-80">
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <span className="font-medium text-foreground">{t.complaintTitle}</span>
+                        {t.notes && <p className="text-xs text-muted-foreground mt-0.5 truncate">{t.notes}</p>}
+                      </div>
+                      {t.quotationAmount && <Badge variant="secondary" className="text-[10px] shrink-0">₹{t.quotationAmount}</Badge>}
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
-            </>
-          )}
-
-          {quotationModal && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
-              <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl">
-                <h3 className="text-lg font-semibold mb-4 text-gray-900">Submit Quotation</h3>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Amount (₹)</label>
-                  <input type="number" value={quotationAmount} onChange={(e) => setQuotationAmount(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Note</label>
-                  <textarea rows={2} value={quotationNote} onChange={(e) => setQuotationNote(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" placeholder="Materials needed, etc." />
-                </div>
-                <div className="flex gap-3">
-                  <button onClick={() => setQuotationModal(null)} className="flex-1 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700">Cancel</button>
-                  <button onClick={submitQuotation} disabled={!quotationAmount} className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 shadow-sm">Submit</button>
-                </div>
-              </div>
             </div>
           )}
 
-          {completionModal && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
-              <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl">
-                <h3 className="text-lg font-semibold mb-4 text-gray-900">Submit Completion</h3>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Proof (photos)</label>
-                  <input type="file" multiple accept="image/*" onChange={(e) => setProofFiles(Array.from(e.target.files || []))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+          {/* Quotation Dialog */}
+          <Dialog open={!!quotationModal} onOpenChange={(open) => !open && setQuotationModal(null)}>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Submit Quotation to Admin</DialogTitle></DialogHeader>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Estimated Amount (₹)</label>
+                  <Input type="number" value={quotationAmount} onChange={(e) => setQuotationAmount(e.target.value)} placeholder="Enter amount" />
                 </div>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                  <textarea rows={3} value={completionNotes} onChange={(e) => setCompletionNotes(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500" placeholder="What was done..." />
-                </div>
-                <div className="flex gap-3">
-                  <button onClick={() => setCompletionModal(null)} className="flex-1 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700">Cancel</button>
-                  <button onClick={submitCompletion} disabled={loading} className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 shadow-sm">{loading ? "Uploading..." : "Submit"}</button>
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Materials / Notes</label>
+                  <Textarea value={quotationNote} onChange={(e) => setQuotationNote(e.target.value)} placeholder="Materials needed, work breakdown..." rows={3} />
                 </div>
               </div>
-            </div>
-          )}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setQuotationModal(null)}>Cancel</Button>
+                <Button onClick={submitQuotation} disabled={!quotationAmount}>Send to Admin</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Completion Dialog */}
+          <Dialog open={!!completionModal} onOpenChange={(open) => !open && setCompletionModal(null)}>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Submit Task Completion</DialogTitle></DialogHeader>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Completion Proof (photos)</label>
+                  <Input type="file" multiple accept="image/*" className="text-sm" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Work Summary</label>
+                  <Textarea value={completionNotes} onChange={(e) => setCompletionNotes(e.target.value)} placeholder="Describe the work done..." rows={4} />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setCompletionModal(null)}>Cancel</Button>
+                <Button onClick={submitCompletion} disabled={loading}>{loading ? "Submitting..." : "Submit for Verification"}</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </DashboardLayout>
     </ProtectedRoute>

@@ -75,6 +75,28 @@ const SPAM_KEYWORDS = [
   "123456",
 ];
 
+function detectCategory(text: string): Category | null {
+  const lower = text.toLowerCase();
+  const categoryKeywords: { category: Category; keywords: string[] }[] = [
+    { category: "plumbing", keywords: ["pipe", "water", "leak", "tap", "drain", "flush", "toilet", "plumb", "sewage", "tank", "bathroom", "restroom"] },
+    { category: "electrical", keywords: ["wire", "switch", "power", "voltage", "circuit", "fan", "light", "socket", "electrical", "fuse", "short circuit"] },
+    { category: "network", keywords: ["wifi", "internet", "network", "server", "printer", "computer", "projector", "cctv", "camera"] },
+    { category: "furniture", keywords: ["chair", "desk", "table", "door", "window", "cupboard", "shelf", "bench", "locker"] },
+    { category: "cleaning", keywords: ["dirty", "garbage", "trash", "dust", "stain", "smell", "hygiene", "sweep", "mop", "waste"] },
+    { category: "civil", keywords: ["wall", "crack", "ceiling", "floor", "roof", "paint", "tile", "staircase", "railing", "collapse"] },
+  ];
+  let bestCategory: Category | null = null;
+  let bestCount = 0;
+  for (const { category, keywords } of categoryKeywords) {
+    const count = keywords.filter((kw) => lower.includes(kw)).length;
+    if (count > bestCount) {
+      bestCount = count;
+      bestCategory = category;
+    }
+  }
+  return bestCount > 0 ? bestCategory : null;
+}
+
 function detectPriority(text: string): Priority {
   const lower = text.toLowerCase();
   if (URGENT_KEYWORDS.some((k) => lower.includes(k))) return "critical";
@@ -191,29 +213,35 @@ function suggestWorker(
   const text = `${title} ${description}`.toLowerCase();
   const preferredSpecialties = CATEGORY_SPECIALTY_MAP[category] || ["general"];
 
-  // keyword boost: check description for specialty hints
+  // keyword patterns per specialty
   const keywordMap: Record<string, string> = {
     electrician: "wire|switch|power|voltage|circuit|fan|light|socket|electrical|fuse|short",
-    plumber: "pipe|water|leak|tap|drain|flush|toilet|plumb|sewage|tank",
+    plumber: "pipe|water|leak|tap|drain|flush|toilet|plumb|sewage|tank|bathroom|restroom",
     technician: "projector|computer|network|wifi|server|printer|ac|air condition|camera|cctv",
   };
 
   let bestWorker: UserProfile | null = null;
-  let bestPriority = Infinity;
+  let bestScore = -1;
 
   for (const worker of workers) {
     const spec = worker.specialty || "general";
-    let priority = preferredSpecialties.indexOf(spec);
-    if (priority === -1) priority = 99;
+    let score = 0;
 
-    // check if description keywords match this worker's specialty
+    // Count how many keywords from the description match this worker's specialty
     const pattern = keywordMap[spec];
-    if (pattern && new RegExp(pattern).test(text)) {
-      priority = Math.min(priority, 0); // boost to top
+    if (pattern) {
+      const keywords = pattern.split("|");
+      const matchCount = keywords.filter((kw) => text.includes(kw)).length;
+      score += matchCount * 10; // keyword matches are strongest signal
     }
 
-    if (priority < bestPriority) {
-      bestPriority = priority;
+    // Category-based bonus (weaker than keyword matches)
+    const catIndex = preferredSpecialties.indexOf(spec);
+    if (catIndex === 0) score += 5;
+    else if (catIndex > 0) score += 2;
+
+    if (score > bestScore) {
+      bestScore = score;
       bestWorker = worker;
     }
   }
@@ -252,6 +280,11 @@ export default function NewComplaintPage() {
         updated.priority = detectPriority(
           updated.title + " " + updated.description
         );
+        // Auto-detect category from title + description
+        const detectedCat = detectCategory(updated.title + " " + updated.description);
+        if (detectedCat) {
+          updated.category = detectedCat;
+        }
         const spam = detectSpam(updated.title, updated.description);
         setSpamWarning(spam.isSpam ? spam.reason : "");
       }

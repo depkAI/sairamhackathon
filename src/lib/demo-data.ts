@@ -1,4 +1,4 @@
-import { Complaint, Task, Feedback, UserProfile, Notification, Announcement } from "./types";
+import { Complaint, Task, Feedback, UserProfile, Notification, Announcement, Idea } from "./types";
 
 // --- Simple hash for demo password storage ---
 function hashPassword(plain: string): string {
@@ -31,7 +31,6 @@ export const DEMO_CREDENTIALS: DemoCredential[] = [
   // Workers
   { loginId: "rajesh@electrician", plainPassword: "10-04-1990", passwordHash: hashPassword("10-04-1990"), uid: "wrk-rajesh", role: "worker", label: "Rajesh (Electrician)" },
   { loginId: "kumar@plumber", plainPassword: "22-01-1988", passwordHash: hashPassword("22-01-1988"), uid: "wrk-kumar", role: "worker", label: "Kumar (Plumber)" },
-  { loginId: "mani@technician", plainPassword: "14-07-1992", passwordHash: hashPassword("14-07-1992"), uid: "wrk-mani", role: "worker", label: "Mani (Technician)" },
 ];
 
 export function verifyPassword(plain: string, hash: string): boolean {
@@ -323,4 +322,9 @@ export const DEMO_NOTIFICATIONS: Notification[] = [
 export const DEMO_ANNOUNCEMENTS: Announcement[] = [
   { id: "a1", department: "Computer Science", title: "Lab Maintenance Schedule", message: "All labs in Block A will undergo maintenance this weekend. Plan accordingly.", createdBy: "staff-001", createdByName: "Dr. Rajesh Iyer", createdAt: daysAgo(1) },
   { id: "a2", department: "Computer Science", title: "New Equipment Installed", message: "New projectors and desktops have been installed in Lab 3.", createdBy: "staff-001", createdByName: "Dr. Rajesh Iyer", createdAt: daysAgo(5) },
+];
+
+export const DEMO_IDEAS: Idea[] = [
+  { id: "idea1", title: "Install water coolers in Block C", description: "Block C has no water coolers on the 2nd and 3rd floors. Students have to go down to the ground floor every time.", department: "Computer Science", status: "approved_by_hod", createdBy: "stu-22cse101", createdByName: "Aarav Sharma", hodReviewedBy: "staff-001", hodReviewedByName: "Dr. Rajesh Iyer", createdAt: daysAgo(3), updatedAt: daysAgo(2) },
+  { id: "idea2", title: "Add charging stations in the library", description: "Many students run out of battery during long study sessions. USB charging stations at desks would be very helpful.", department: "Computer Science", status: "pending", createdBy: "stu-22cse101", createdByName: "Aarav Sharma", createdAt: daysAgo(1), updatedAt: daysAgo(1) },
 ];

@@ -16,7 +16,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
 import toast from "react-hot-toast";
 import {
   GraduationCap,
@@ -25,11 +24,13 @@ import {
   Eye,
   EyeOff,
   LogIn,
-  Building2,
   ClipboardCheck,
   Users,
   Zap,
 } from "lucide-react";
+import ThemeToggle from "@/components/ThemeToggle";
+import MouseSpotlight from "@/components/effects/MouseSpotlight";
+import AnimatedGrid from "@/components/effects/AnimatedGrid";
 
 type RoleTab = "student" | "staff" | "worker";
 
@@ -61,7 +62,7 @@ const demoByRole: Record<RoleTab, typeof DEMO_CREDENTIALS> = {
 };
 
 export default function LoginPage() {
-  const { login, isDemoMode } = useAuth();
+  const { login } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<RoleTab>("student");
   const [loginId, setLoginId] = useState("");
@@ -90,98 +91,105 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
-      {/* Left hero panel - hidden on mobile */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-primary via-primary/90 to-primary/70">
-        {/* Decorative background shapes */}
-        <div className="absolute inset-0">
-          <div className="absolute top-20 left-10 h-72 w-72 rounded-full bg-white/5 blur-2xl" />
-          <div className="absolute bottom-20 right-10 h-96 w-96 rounded-full bg-white/5 blur-3xl" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-64 w-64 rounded-full bg-white/5 blur-xl" />
-        </div>
+    <div className="min-h-screen flex flex-col lg:flex-row bg-white dark:bg-gray-950">
+      {/* Left panel — Cyber theme */}
+      <div className="hidden lg:flex lg:w-[50%] relative overflow-hidden bg-gray-950">
+        {/* Cyber grid overlay */}
+        <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "linear-gradient(rgba(0,255,200,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(0,255,200,0.3) 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
+        {/* Neon glow blobs */}
+        <div className="absolute -top-20 -left-20 h-[400px] w-[400px] rounded-full bg-cyan-500/15 blur-[100px]" />
+        <div className="absolute bottom-0 right-0 h-[350px] w-[350px] rounded-full bg-emerald-500/10 blur-[100px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[250px] w-[250px] rounded-full bg-teal-400/5 blur-[80px]" />
+        {/* Scan line effect */}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-400/[0.03] to-transparent animate-pulse" />
 
-        <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20 text-primary-foreground">
-          <div className="mb-10">
-            <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-white/15 backdrop-blur-sm font-bold text-2xl mb-6 ring-1 ring-white/20">
-              CO
+        <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20 2xl:px-24 text-white w-full">
+          {/* Logo */}
+          <div className="mb-12">
+            <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-cyan-400/10 border border-cyan-400/20 backdrop-blur-sm font-bold text-xl mb-8 shadow-[0_0_20px_rgba(0,255,200,0.15)]">
+              <span className="text-cyan-400">CO</span>
             </div>
-            <h1 className="text-4xl xl:text-5xl font-bold tracking-tight leading-tight">
-              CampusOps
+            <h1 className="text-4xl xl:text-5xl font-extrabold tracking-tight leading-tight">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400">
+                CampusOps
+              </span>
             </h1>
-            <p className="text-lg text-primary-foreground/70 mt-3 max-w-md">
+            <p className="text-base xl:text-lg text-gray-400 mt-4 max-w-md leading-relaxed">
               Smart Campus Issue Reporter. Report, track, and resolve campus
               issues seamlessly.
             </p>
           </div>
 
-          <div className="space-y-5 mt-4">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-xl bg-white/10 backdrop-blur-sm ring-1 ring-white/10">
-                <ClipboardCheck className="h-5 w-5" />
+          {/* Features */}
+          <div className="space-y-6">
+            {[
+              { icon: <ClipboardCheck className="h-5 w-5" />, title: "Report Issues Instantly", desc: "Submit complaints with photos, audio notes, and precise location details" },
+              { icon: <Users className="h-5 w-5" />, title: "Role-Based Workflows", desc: "Students, staff, and workers each have tailored dashboards and actions" },
+              { icon: <Zap className="h-5 w-5" />, title: "Real-Time Tracking", desc: "Monitor issue resolution from submission to completion with live updates" },
+            ].map((item, i) => (
+              <div key={i} className="flex items-start gap-4 group">
+                <div className="flex-shrink-0 flex items-center justify-center h-11 w-11 rounded-xl bg-cyan-400/10 border border-cyan-400/15 group-hover:border-cyan-400/30 group-hover:shadow-[0_0_15px_rgba(0,255,200,0.1)] transition-all duration-300">
+                  <span className="text-cyan-400">{item.icon}</span>
+                </div>
+                <div>
+                  <p className="font-semibold text-[15px] text-gray-100">{item.title}</p>
+                  <p className="text-sm text-gray-500 mt-1 leading-relaxed">{item.desc}</p>
+                </div>
               </div>
-              <div>
-                <p className="font-semibold text-sm">Report Issues Instantly</p>
-                <p className="text-sm text-primary-foreground/60 mt-0.5">
-                  Submit complaints with photos and location details
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-xl bg-white/10 backdrop-blur-sm ring-1 ring-white/10">
-                <Users className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="font-semibold text-sm">Role-Based Workflows</p>
-                <p className="text-sm text-primary-foreground/60 mt-0.5">
-                  Students, staff, and workers each have tailored dashboards
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-xl bg-white/10 backdrop-blur-sm ring-1 ring-white/10">
-                <Zap className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="font-semibold text-sm">Real-Time Tracking</p>
-                <p className="text-sm text-primary-foreground/60 mt-0.5">
-                  Monitor issue resolution from submission to completion
-                </p>
-              </div>
+            ))}
+          </div>
+
+          {/* Bottom stats */}
+          <div className="mt-14 pt-8 border-t border-gray-800/60">
+            <div className="grid grid-cols-3 gap-6">
+              {[
+                { value: "500+", label: "Issues Resolved" },
+                { value: "4.8\u2605", label: "User Rating" },
+                { value: "<2hr", label: "Avg Response" },
+              ].map((s, i) => (
+                <div key={i}>
+                  <p className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-emerald-400">{s.value}</p>
+                  <p className="text-xs text-gray-600 mt-1 uppercase tracking-wider font-medium">{s.label}</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Right login panel */}
-      <div className="flex-1 flex items-center justify-center bg-background px-4 py-8 sm:px-6 lg:px-12">
-        <div className="w-full max-w-md">
-          {/* Mobile-only header */}
+      {/* Right panel */}
+      <div className="flex-1 flex items-center justify-center px-6 py-10 lg:px-16 overflow-y-auto relative">
+        <MouseSpotlight color="rgba(6, 182, 212, 0.04)" size={600} />
+        <AnimatedGrid />
+        <div className="absolute top-4 right-4 z-20">
+          <ThemeToggle />
+        </div>
+        <div className="w-full max-w-[400px] relative z-10">
+          {/* Mobile header */}
           <div className="lg:hidden text-center mb-8">
-            <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-primary text-primary-foreground font-bold text-base mb-3">
+            <div className="inline-flex items-center justify-center h-11 w-11 rounded-xl bg-cyan-400/10 border border-cyan-400/20 text-cyan-500 font-bold text-sm mb-3">
               CO
             </div>
-            <h1 className="text-xl font-bold text-foreground">CampusOps</h1>
-            <p className="text-muted-foreground text-sm mt-1">
-              Smart Campus Issue Reporter
-            </p>
+            <h1 className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-500 to-emerald-500">CampusOps</h1>
+            <p className="text-gray-500 dark:text-gray-400 text-[13px] mt-0.5">Smart Campus Issue Reporter</p>
           </div>
 
-          {/* Desktop heading above card */}
-          <div className="hidden lg:block mb-6">
-            <h2 className="text-2xl font-bold text-foreground">Welcome back</h2>
-            <p className="text-muted-foreground text-sm mt-1">
+          {/* Desktop heading */}
+          <div className="hidden lg:block mb-7">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Welcome back</h2>
+            <p className="text-gray-500 dark:text-gray-400 text-[13px] mt-1">
               Sign in to your account to continue
             </p>
           </div>
 
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle>Sign in</CardTitle>
-              <CardDescription>
+          <Card className="shadow-sm border-gray-100 dark:border-gray-800 rounded-2xl">
+            <CardHeader className="px-6 pt-6 pb-4">
+              <CardTitle className="text-[16px]">Sign in</CardTitle>
+              <CardDescription className="text-[13px]">
                 Choose your role and enter your credentials
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="px-6 pb-6 space-y-6">
               <Tabs
                 value={activeTab}
                 onValueChange={(v) => {
@@ -190,34 +198,27 @@ export default function LoginPage() {
                   setPassword("");
                 }}
               >
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger
-                    value="student"
-                    className="gap-1.5 text-xs sm:text-sm"
-                  >
-                    <GraduationCap className="h-4 w-4" />
-                    <span className="hidden sm:inline">Student</span>
+                <TabsList className="grid w-full grid-cols-3 h-10 rounded-xl">
+                  <TabsTrigger value="student" className="gap-1.5 text-[13px] rounded-lg">
+                    <GraduationCap className="h-3.5 w-3.5" />
+                    Student
                   </TabsTrigger>
-                  <TabsTrigger
-                    value="staff"
-                    className="gap-1.5 text-xs sm:text-sm"
-                  >
-                    <Shield className="h-4 w-4" />
-                    <span className="hidden sm:inline">Staff</span>
+                  <TabsTrigger value="staff" className="gap-1.5 text-[13px] rounded-lg">
+                    <Shield className="h-3.5 w-3.5" />
+                    Staff
                   </TabsTrigger>
-                  <TabsTrigger
-                    value="worker"
-                    className="gap-1.5 text-xs sm:text-sm"
-                  >
-                    <Wrench className="h-4 w-4" />
-                    <span className="hidden sm:inline">Worker</span>
+                  <TabsTrigger value="worker" className="gap-1.5 text-[13px] rounded-lg">
+                    <Wrench className="h-3.5 w-3.5" />
+                    Worker
                   </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value={activeTab} className="mt-5 space-y-4">
                   <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="loginId">{cfg.idLabel}</Label>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="loginId" className="text-[13px] font-medium text-gray-700 dark:text-gray-300">
+                        {cfg.idLabel}
+                      </Label>
                       <Input
                         id="loginId"
                         type="text"
@@ -225,12 +226,14 @@ export default function LoginPage() {
                         value={loginId}
                         onChange={(e) => setLoginId(e.target.value)}
                         placeholder={cfg.idPlaceholder}
-                        className="h-11"
+                        className="h-10 text-[13px] rounded-lg border-gray-200 dark:border-gray-700 focus:border-indigo-300 focus:ring-indigo-200"
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="password">Password</Label>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="password" className="text-[13px] font-medium text-gray-700 dark:text-gray-300">
+                        Password
+                      </Label>
                       <div className="relative">
                         <Input
                           id="password"
@@ -239,21 +242,17 @@ export default function LoginPage() {
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           placeholder="DD-MM-YYYY"
-                          className="h-11 pr-10"
+                          className="h-10 text-[13px] pr-10 rounded-lg border-gray-200 dark:border-gray-700 focus:border-indigo-300 focus:ring-indigo-200"
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                         >
-                          {showPassword ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
                       </div>
-                      <p className="text-[11px] text-muted-foreground">
+                      <p className="text-[13px] text-gray-400 dark:text-gray-500">
                         Use your Date of Birth as password
                       </p>
                     </div>
@@ -261,11 +260,11 @@ export default function LoginPage() {
                     <Button
                       type="submit"
                       disabled={loading}
-                      className="w-full h-11 mt-2"
+                      className="w-full h-10 mt-1 text-[13px] font-medium rounded-lg"
                     >
                       {loading ? (
                         <span className="flex items-center gap-2">
-                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                          <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
                           Signing in...
                         </span>
                       ) : (
@@ -278,16 +277,16 @@ export default function LoginPage() {
                 </TabsContent>
               </Tabs>
 
-              {/* Demo Credentials */}
-              {isDemoMode && (
+              {/* Demo Credentials — always shown for hackathon demo */}
+              {(
                 <>
-                  <Separator />
+                  <div className="h-px bg-gray-100 dark:bg-gray-800" />
                   <div>
-                    <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                    <p className="text-[12px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse" />
                       Quick Demo Access
                     </p>
-                    <div className="grid gap-2">
+                    <div className="grid gap-1.5">
                       {demoByRole[activeTab].map((acc) => (
                         <button
                           key={acc.loginId}
@@ -296,33 +295,22 @@ export default function LoginPage() {
                             setLoginId(acc.loginId);
                             setPassword(acc.plainPassword);
                           }}
-                          className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg border border-border/60 bg-muted/30 hover:border-primary/40 hover:bg-accent/60 transition-all text-left text-sm group"
+                          className="w-full flex items-center justify-between px-4 py-3 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30 hover:border-indigo-200 dark:hover:border-indigo-700 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20 transition-all text-left group"
                         >
                           <div className="flex items-center gap-2.5">
-                            <div className="flex items-center justify-center h-7 w-7 rounded-md bg-primary/10 text-primary">
-                              {activeTab === "student" && (
-                                <GraduationCap className="h-3.5 w-3.5" />
-                              )}
-                              {activeTab === "staff" && (
-                                <Shield className="h-3.5 w-3.5" />
-                              )}
-                              {activeTab === "worker" && (
-                                <Wrench className="h-3.5 w-3.5" />
-                              )}
+                            <div className="flex items-center justify-center h-7 w-7 rounded-md bg-indigo-50 dark:bg-indigo-950/30 text-indigo-500">
+                              {activeTab === "student" && <GraduationCap className="h-3.5 w-3.5" />}
+                              {activeTab === "staff" && <Shield className="h-3.5 w-3.5" />}
+                              {activeTab === "worker" && <Wrench className="h-3.5 w-3.5" />}
                             </div>
                             <div>
-                              <span className="font-medium text-foreground group-hover:text-primary transition-colors block text-sm">
+                              <span className="font-medium text-gray-800 dark:text-gray-200 group-hover:text-indigo-600 transition-colors block text-[13px]">
                                 {acc.loginId}
                               </span>
-                              <span className="text-muted-foreground text-xs">
-                                {acc.label}
-                              </span>
+                              <span className="text-gray-400 dark:text-gray-500 text-[13px]">{acc.label}</span>
                             </div>
                           </div>
-                          <Badge
-                            variant="secondary"
-                            className="text-[10px] capitalize"
-                          >
+                          <Badge variant="secondary" className="text-[12px] capitalize rounded-md">
                             {acc.role}
                           </Badge>
                         </button>
@@ -334,8 +322,7 @@ export default function LoginPage() {
             </CardContent>
           </Card>
 
-          <p className="text-center text-xs text-muted-foreground mt-6">
-            <Building2 className="inline h-3 w-3 mr-1 -mt-0.5" />
+          <p className="text-center text-[13px] text-gray-400 dark:text-gray-500 mt-6">
             Campus Operations Management System
           </p>
         </div>

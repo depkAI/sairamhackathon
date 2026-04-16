@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import { addComplaint, useComplaints, addNotification } from "@/lib/useData";
+import { addComplaint, useComplaints, notifyRole } from "@/lib/useData";
 import { Category, Priority, DEPARTMENTS, LOCATIONS } from "@/lib/types";
 import DashboardLayout from "@/components/DashboardLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -62,11 +62,8 @@ const URGENT_KEYWORDS = [
   "smoke",
 ];
 const SPAM_KEYWORDS = [
-  "test",
   "asdf",
   "qwerty",
-  "hello",
-  "hi",
   "lol",
   "xxx",
   "aaa",
@@ -97,7 +94,7 @@ function detectSpam(
   desc: string
 ): { isSpam: boolean; reason: string } {
   const combined = (title + " " + desc).toLowerCase();
-  if (desc.length < 10)
+  if (desc.trim().length < 5)
     return {
       isSpam: true,
       reason: "Description is too short. Please provide details.",
@@ -118,7 +115,7 @@ function detectSpam(
       reason: "This looks like a test/spam submission.",
     };
   const words = desc.trim().split(/\s+/);
-  if (words.length > 2 && new Set(words).size === 1)
+  if (words.length > 3 && new Set(words).size === 1)
     return {
       isSpam: true,
       reason: "Description contains the same word repeated.",
@@ -139,6 +136,7 @@ export default function NewComplaintPage() {
     department: profile?.department || DEPARTMENTS[0],
   });
   const [files, setFiles] = useState<File[]>([]);
+  const [imageWarning, setImageWarning] = useState("");
   const [audio, setAudio] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [duplicateWarning, setDuplicateWarning] = useState("");
@@ -218,10 +216,21 @@ export default function NewComplaintPage() {
     }
     setLoading(true);
     try {
+      // Convert audio to data URL for demo mode / upload to storage in production
+      let audioUrl: string | undefined;
+      if (audio) {
+        audioUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(audio);
+        });
+      }
+
       await addComplaint({
         ...form,
         attachments: [],
-        audioAttachment: audio ? "audio_attached" : undefined,
+        audioAttachment: audioUrl || undefined,
         status: "pending",
         createdBy: profile.uid,
         createdByName: profile.name,
@@ -229,14 +238,15 @@ export default function NewComplaintPage() {
         updatedAt: new Date(),
         isSpam: false,
       });
-      await addNotification(
-        "staff-001",
+      await notifyRole(
+        "hod",
         "New Complaint",
         `${profile.name} reported: ${form.title}`,
-        "/dashboard/hod"
+        "/dashboard/hod",
+        form.department
       );
-      await addNotification(
-        "admin-001",
+      await notifyRole(
+        "admin",
         "New Complaint",
         `${profile.name} reported: ${form.title}`,
         "/dashboard/admin"
@@ -502,13 +512,48 @@ export default function NewComplaintPage() {
                       type="file"
                       multiple
                       accept="image/*"
-                      onChange={(e) =>
-                        setFiles(Array.from(e.target.files || []))
-                      }
+                      onChange={(e) => {
+                        const selected = Array.from(e.target.files || []);
+                        // Image spam detection
+                        const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+                        const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+                        const invalid = selected.filter((f) => !ALLOWED_TYPES.includes(f.type));
+                        const tooLarge = selected.filter((f) => f.size > MAX_SIZE);
+                        const duplicateNames = selected.filter((f, i) => selected.findIndex((s) => s.name === f.name) !== i);
+
+                        if (invalid.length > 0) {
+                          setImageWarning(`Invalid file type: ${invalid.map((f) => f.name).join(", ")}. Only JPEG, PNG, WebP, GIF allowed.`);
+                          setFiles([]);
+                          return;
+                        }
+                        if (tooLarge.length > 0) {
+                          setImageWarning(`File too large: ${tooLarge.map((f) => f.name).join(", ")}. Max 10MB per image.`);
+                          setFiles([]);
+                          return;
+                        }
+                        if (selected.length > 5) {
+                          setImageWarning("Maximum 5 images allowed per complaint.");
+                          setFiles([]);
+                          return;
+                        }
+                        if (duplicateNames.length > 0) {
+                          setImageWarning("Duplicate files detected. Please select unique images.");
+                          setFiles([]);
+                          return;
+                        }
+                        setImageWarning("");
+                        setFiles(selected);
+                      }}
                       className="cursor-pointer"
                     />
                   </div>
-                  {files.length > 0 && (
+                  {imageWarning && (
+                    <p className="text-xs text-red-600 flex items-center gap-1.5">
+                      <ShieldAlert className="h-3.5 w-3.5" />
+                      {imageWarning}
+                    </p>
+                  )}
+                  {files.length > 0 && !imageWarning && (
                     <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                       <CheckCircle className="h-3.5 w-3.5 text-emerald-500" />
                       {files.length} file(s) selected
@@ -569,7 +614,7 @@ export default function NewComplaintPage() {
             {/* Submit */}
             <Button
               type="submit"
-              disabled={loading || !!spamWarning}
+              disabled={loading || !!spamWarning || !!imageWarning}
               size="lg"
               className="w-full shadow-sm"
             >

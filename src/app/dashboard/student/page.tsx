@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { useComplaints, useFeedback, addFeedback } from "@/lib/useData";
+import { useComplaints, useFeedback, addFeedback, useAnnouncements, useTasks } from "@/lib/useData";
 import { Feedback } from "@/lib/types";
 import DashboardLayout from "@/components/DashboardLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -22,6 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import { useState } from "react";
+import { Progress } from "@/components/ui/progress";
 import {
   Plus,
   Star,
@@ -34,7 +35,15 @@ import {
   Inbox,
   TrendingUp,
   MessageSquare,
+  Megaphone,
+  User,
+  CalendarDays,
+  Activity,
+  UserCheck,
+  Timer,
+  AlertTriangle,
 } from "lucide-react";
+import MouseGlowCard from "@/components/effects/MouseGlowCard";
 
 export default function StudentDashboard() {
   const { profile } = useAuth();
@@ -44,6 +53,8 @@ export default function StudentDashboard() {
   const feedbackList = useFeedback(
     profile ? { field: "studentId", value: profile.uid } : undefined
   );
+  const allTasks = useTasks();
+  const announcements = useAnnouncements(profile?.department);
   const [feedbackModal, setFeedbackModal] = useState<string | null>(null);
   const [rating, setRating] = useState(5);
   const [feedbackText, setFeedbackText] = useState("");
@@ -118,12 +129,12 @@ export default function StudentDashboard() {
                 Track and manage your reported campus issues
               </p>
             </div>
-            <Button size="lg" className="shadow-sm">
-              <Link href="/dashboard/student/new-complaint">
+            <Link href="/dashboard/student/new-complaint">
+              <Button size="lg" className="shadow-sm">
                 <Plus className="mr-2 h-4 w-4" />
                 Report Issue
-              </Link>
-            </Button>
+              </Button>
+            </Link>
           </div>
 
           {/* Stats Grid */}
@@ -131,11 +142,11 @@ export default function StudentDashboard() {
             {stats.map((s, i) => {
               const Icon = s.icon;
               return (
-                <Card
+                <MouseGlowCard
                   key={i}
-                  className={`overflow-hidden border-0 shadow-sm bg-gradient-to-br ${s.gradient}`}
+                  className={`overflow-hidden border-0 rounded-2xl shadow-sm bg-gradient-to-br ${s.gradient} hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 animate-scale-in`}
                 >
-                  <CardContent className="p-5 flex items-center gap-4">
+                  <div className="p-5 flex items-center gap-4" style={{ animationDelay: `${i * 80}ms` }}>
                     <div
                       className={`flex h-12 w-12 items-center justify-center rounded-xl ${s.iconBg} shrink-0`}
                     >
@@ -149,11 +160,117 @@ export default function StudentDashboard() {
                         {s.value}
                       </p>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </MouseGlowCard>
               );
             })}
           </div>
+
+          {/* Live Tracking Section */}
+          {complaints.filter((c) => !["completed", "verified", "rejected"].includes(c.status)).length > 0 && (
+            <>
+              <Separator />
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <Activity className="h-5 w-5 text-indigo-500 animate-pulse" />
+                  <h2 className="text-lg font-semibold text-foreground">
+                    Live Tracking
+                  </h2>
+                  <Badge variant="secondary" className="ml-auto text-xs">
+                    {complaints.filter((c) => !["completed", "verified", "rejected"].includes(c.status)).length} active
+                  </Badge>
+                </div>
+                <div className="space-y-3">
+                  {complaints
+                    .filter((c) => !["completed", "verified", "rejected"].includes(c.status))
+                    .map((c) => {
+                      const task = allTasks.find((t) => t.complaintId === c.id && t.status !== "rejected");
+                      const statusLabels: Record<string, string> = {
+                        pending: "Waiting for HOD review",
+                        reviewed: "Reviewed by HOD — awaiting worker assignment",
+                        assigned: task ? `Assigned to ${task.workerName} — awaiting acceptance` : "Worker being assigned",
+                        in_progress: task ? `${task.workerName} is working on it` : "Work in progress",
+                        quotation_submitted: task ? `${task.workerName} submitted quotation (₹${task.quotationAmount}) — awaiting admin approval` : "Quotation under review",
+                        quotation_approved: task ? `Quotation approved — ${task.workerName} proceeding` : "Quotation approved",
+                        escalated: "Escalated to admin — deadline was missed",
+                      };
+                      const stageOrder = ["pending", "reviewed", "assigned", "in_progress", "completed"];
+                      const stageIdx = stageOrder.indexOf(
+                        c.status === "quotation_submitted" || c.status === "quotation_approved" ? "in_progress" : c.status === "escalated" ? "in_progress" : c.status
+                      );
+                      const progressPct = Math.max(10, ((stageIdx + 1) / stageOrder.length) * 100);
+                      const deadlineInfo = task?.deadline ? (() => {
+                        const diff = new Date(task.deadline).getTime() - Date.now();
+                        if (diff <= 0) return { text: "OVERDUE", overdue: true };
+                        const hours = Math.floor(diff / (1000 * 60 * 60));
+                        const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                        return { text: `${hours}h ${mins}m remaining`, overdue: false };
+                      })() : null;
+
+                      return (
+                        <Link key={c.id} href={`/dashboard/student/complaint/${c.id}`} className="block group">
+                          <Card className={`transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${c.status === "escalated" ? "border-red-200 bg-red-50/30" : ""}`}>
+                            <CardContent className="p-4 sm:p-5 space-y-3">
+                              {/* Title row */}
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                                    <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors truncate">
+                                      {c.title}
+                                    </h3>
+                                    <StatusBadge status={c.status} />
+                                  </div>
+                                  <p className="text-sm text-muted-foreground">
+                                    {statusLabels[c.status] || c.status.replace(/_/g, " ")}
+                                  </p>
+                                </div>
+                                <ArrowRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary shrink-0 mt-1" />
+                              </div>
+
+                              {/* Progress bar */}
+                              <div className="space-y-1.5">
+                                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                  <span>Progress</span>
+                                  <span>{Math.round(progressPct)}%</span>
+                                </div>
+                                <Progress
+                                  value={progressPct}
+                                  className={`h-2 rounded-full ${c.status === "escalated" ? "[&>div]:bg-red-500" : "[&>div]:bg-indigo-50 dark:bg-indigo-950/300"}`}
+                                />
+                              </div>
+
+                              {/* Worker & deadline info */}
+                              <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+                                {task && (
+                                  <span className="flex items-center gap-1.5">
+                                    <UserCheck className="h-3.5 w-3.5 text-indigo-500" />
+                                    {task.workerName}
+                                  </span>
+                                )}
+                                {deadlineInfo && (
+                                  <span className={`flex items-center gap-1.5 ${deadlineInfo.overdue ? "text-red-600 font-medium" : ""}`}>
+                                    {deadlineInfo.overdue ? <AlertTriangle className="h-3.5 w-3.5" /> : <Timer className="h-3.5 w-3.5" />}
+                                    {deadlineInfo.text}
+                                  </span>
+                                )}
+                                <span className="flex items-center gap-1.5">
+                                  <MapPin className="h-3.5 w-3.5" />
+                                  {c.location}
+                                </span>
+                                <span className="flex items-center gap-1.5 capitalize">
+                                  <AlertCircle className="h-3.5 w-3.5" />
+                                  {c.category}
+                                </span>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </Link>
+                      );
+                    })}
+                </div>
+              </div>
+            </>
+          )}
 
           <Separator />
 
@@ -220,7 +337,7 @@ export default function StudentDashboard() {
                                   ? "default"
                                   : "secondary"
                               }
-                              className="text-[10px] font-medium"
+                              className="text-xs font-medium"
                             >
                               {c.priority}
                             </Badge>
@@ -245,6 +362,12 @@ export default function StudentDashboard() {
                               <Clock className="h-3.5 w-3.5" />
                               {new Date(c.createdAt).toLocaleDateString()}
                             </span>
+                            {c.assignedToName && (
+                              <span className="flex items-center gap-1.5">
+                                <UserCheck className="h-3.5 w-3.5 text-indigo-500" />
+                                {c.assignedToName}
+                              </span>
+                            )}
                           </div>
                         </div>
 
@@ -288,10 +411,55 @@ export default function StudentDashboard() {
             </div>
           </div>
 
+          {/* Announcements Section */}
+          {announcements.length > 0 && (
+            <>
+              <Separator />
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                      <Megaphone className="h-4 w-4 text-indigo-500" />
+                      Department Announcements
+                    </h2>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 ml-6">{announcements.length} announcement{announcements.length !== 1 && "s"}</p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {announcements.slice(0, 5).map((a, i) => (
+                    <Card key={a.id} className="rounded-2xl border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-all duration-300 animate-fade-in" style={{ animationDelay: `${i * 80}ms` }}>
+                      <CardContent className="p-5">
+                        <div className="flex items-start gap-3.5">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-950/30 text-indigo-500">
+                            <Megaphone className="h-4 w-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-base text-gray-900 dark:text-gray-100">{a.title}</h3>
+                            <p className="text-gray-500 dark:text-gray-400 text-[13px] mt-1.5 leading-relaxed">{a.message}</p>
+                            <div className="flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500 mt-3">
+                              <span className="flex items-center gap-1"><User className="h-3 w-3" />{a.createdByName}</span>
+                              <span className="flex items-center gap-1"><CalendarDays className="h-3 w-3" />{new Date(a.createdAt).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
           {/* Feedback Dialog */}
           <Dialog
             open={!!feedbackModal}
-            onOpenChange={(open) => !open && setFeedbackModal(null)}
+            onOpenChange={(open) => {
+              if (!open) {
+                setFeedbackModal(null);
+                setRating(5);
+                setFeedbackText("");
+              }
+            }}
           >
             <DialogContent className="sm:max-w-md">
               <DialogHeader>

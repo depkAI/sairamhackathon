@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useTasks, updateTask, updateComplaint, addNotification } from "@/lib/useData";
+import { useTasks, updateTask, updateComplaint, addNotification, notifyRole } from "@/lib/useData";
 import DashboardLayout from "@/components/DashboardLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,6 +39,7 @@ import {
   ClipboardCheck,
   RefreshCw,
 } from "lucide-react";
+import MouseGlowCard from "@/components/effects/MouseGlowCard";
 
 function getTimeRemaining(deadline: Date): {
   text: string;
@@ -69,6 +70,7 @@ export default function WorkerDashboard() {
   const [completionNotes, setCompletionNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [, setTick] = useState(0);
+  const escalatedRef = useRef<Set<string>>(new Set());
 
   // Auto-refresh timer display every minute
   useEffect(() => {
@@ -78,19 +80,23 @@ export default function WorkerDashboard() {
 
   // Auto-escalate: if accepted but not completed within deadline, mark as escalated
   useEffect(() => {
-    tasks.forEach(async (t) => {
-      if (
-        (t.status === "accepted" || t.status === "in_progress") &&
-        new Date(t.deadline) < new Date()
-      ) {
+    const processEscalations = async () => {
+      const overdue = tasks.filter(
+        (t) =>
+          (t.status === "accepted" || t.status === "in_progress") &&
+          new Date(t.deadline) < new Date() &&
+          !escalatedRef.current.has(t.id)
+      );
+      for (const t of overdue) {
+        escalatedRef.current.add(t.id);
         try {
           await updateTask(t.id, { status: "escalated" });
           await updateComplaint(t.complaintId, {
             status: "escalated",
             escalatedAt: new Date(),
           });
-          await addNotification(
-            "admin-001",
+          await notifyRole(
+            "admin",
             "Task Auto-Escalated",
             `Task "${t.complaintTitle}" by ${t.workerName} missed the 48hr deadline.`,
             "/dashboard/admin"
@@ -99,7 +105,8 @@ export default function WorkerDashboard() {
           /* already escalated */
         }
       }
-    });
+    };
+    processEscalations();
   }, [tasks]);
 
   const acceptTask = async (taskId: string) => {
@@ -124,8 +131,8 @@ export default function WorkerDashboard() {
           assignedTo: undefined,
           assignedToName: undefined,
         });
-      await addNotification(
-        "admin-001",
+      await notifyRole(
+        "admin",
         "Task Rejected",
         `${profile?.name} rejected: ${task?.complaintTitle}`,
         "/dashboard/admin"
@@ -138,10 +145,15 @@ export default function WorkerDashboard() {
 
   const submitQuotation = async () => {
     if (!quotationModal || !quotationAmount) return;
+    const amount = parseFloat(quotationAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error("Please enter a valid positive amount");
+      return;
+    }
     const task = tasks.find((t) => t.id === quotationModal);
     try {
       await updateTask(quotationModal, {
-        quotationAmount: parseFloat(quotationAmount),
+        quotationAmount: amount,
         quotationNote,
         status: "quotation_submitted",
       });
@@ -149,8 +161,8 @@ export default function WorkerDashboard() {
         await updateComplaint(task.complaintId, {
           status: "quotation_submitted",
         });
-      await addNotification(
-        "admin-001",
+      await notifyRole(
+        "admin",
         "Quotation Submitted",
         `${profile?.name} submitted ₹${quotationAmount} for "${task?.complaintTitle}"`,
         "/dashboard/admin"
@@ -176,8 +188,8 @@ export default function WorkerDashboard() {
       });
       if (task)
         await updateComplaint(task.complaintId, { status: "completed" });
-      await addNotification(
-        "admin-001",
+      await notifyRole(
+        "admin",
         "Task Completed",
         `${profile?.name} completed: "${task?.complaintTitle}". Needs verification.`,
         "/dashboard/admin"
@@ -232,8 +244,8 @@ export default function WorkerDashboard() {
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20">
-              <CardContent className="p-6">
+            <MouseGlowCard className="relative overflow-hidden border-0 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 animate-scale-in" glowColor="rgba(59,130,246,0.1)">
+              <div className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-blue-600 dark:text-blue-400">
@@ -247,11 +259,11 @@ export default function WorkerDashboard() {
                     <ListChecks className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </MouseGlowCard>
 
-            <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-amber-50 to-orange-100/50 dark:from-amber-950/30 dark:to-orange-900/20">
-              <CardContent className="p-6">
+            <MouseGlowCard className="relative overflow-hidden border-0 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-100/50 dark:from-amber-950/30 dark:to-orange-900/20 hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 animate-scale-in" glowColor="rgba(245,158,11,0.1)">
+              <div className="p-6" style={{ animationDelay: "80ms" }}>
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-amber-600 dark:text-amber-400">
@@ -265,11 +277,11 @@ export default function WorkerDashboard() {
                     <Zap className="h-6 w-6 text-amber-600 dark:text-amber-400" />
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </MouseGlowCard>
 
-            <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-emerald-50 to-green-100/50 dark:from-emerald-950/30 dark:to-green-900/20">
-              <CardContent className="p-6">
+            <MouseGlowCard className="relative overflow-hidden border-0 rounded-2xl bg-gradient-to-br from-emerald-50 to-green-100/50 dark:from-emerald-950/30 dark:to-green-900/20 hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 animate-scale-in" glowColor="rgba(16,185,129,0.1)">
+              <div className="p-6" style={{ animationDelay: "160ms" }}>
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
@@ -283,8 +295,8 @@ export default function WorkerDashboard() {
                     <CheckCircle2 className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </MouseGlowCard>
           </div>
 
           <Separator />
@@ -577,6 +589,8 @@ export default function WorkerDashboard() {
                     <Input
                       id="quotation-amount"
                       type="number"
+                      min="1"
+                      max="10000000"
                       value={quotationAmount}
                       onChange={(e) => setQuotationAmount(e.target.value)}
                       placeholder="0.00"

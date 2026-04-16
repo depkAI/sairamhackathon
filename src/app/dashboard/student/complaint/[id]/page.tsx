@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useComplaints, useTasks, useFeedback } from "@/lib/useData";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -14,6 +15,9 @@ import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { DEMO_USERS } from "@/lib/demo-data";
+import { sendWhatsAppMessage, getWhatsAppPhone } from "@/lib/whatsapp";
+import toast from "react-hot-toast";
 import {
   ArrowLeft,
   MapPin,
@@ -29,16 +33,35 @@ import {
   User,
   CalendarClock,
   MessageSquare,
+  Phone,
 } from "lucide-react";
 
-const statusSteps = [
+const BASE_STEPS = [
   { key: "pending", label: "Submitted", description: "Your complaint has been received" },
   { key: "reviewed", label: "Reviewed by HOD", description: "Department head has reviewed the issue" },
   { key: "assigned", label: "Worker Assigned", description: "A maintenance worker has been assigned" },
   { key: "in_progress", label: "In Progress", description: "Work is currently underway" },
-  { key: "completed", label: "Completed", description: "The issue has been resolved" },
-  { key: "verified", label: "Verified", description: "Resolution has been verified" },
 ];
+
+const QUOTATION_STEPS = [
+  { key: "quotation_submitted", label: "Quotation Submitted", description: "Worker submitted a cost estimate for approval" },
+  { key: "quotation_approved", label: "Quotation Approved", description: "Admin approved the quotation — work proceeding" },
+];
+
+const FINAL_STEPS = [
+  { key: "completed", label: "Completed", description: "The issue has been resolved" },
+  { key: "verified", label: "Verified", description: "Resolution has been verified by admin" },
+];
+
+function getStatusSteps(complaintStatus: string, hasQuotation: boolean) {
+  // Include quotation steps only if the complaint went through quotation flow
+  const showQuotation = hasQuotation ||
+    ["quotation_submitted", "quotation_approved"].includes(complaintStatus);
+  if (showQuotation) {
+    return [...BASE_STEPS, ...QUOTATION_STEPS, ...FINAL_STEPS];
+  }
+  return [...BASE_STEPS, ...FINAL_STEPS];
+}
 
 export default function ComplaintDetailPage() {
   const { id } = useParams();
@@ -76,13 +99,16 @@ export default function ComplaintDetailPage() {
     );
   }
 
+  const hasQuotation = task?.quotationAmount != null;
+  const statusSteps = getStatusSteps(complaint.status, hasQuotation);
+
   const currentStepIndex =
-    complaint.status === "rejected"
+    complaint.status === "rejected" || complaint.status === "escalated"
       ? -1
       : statusSteps.findIndex((s) => s.key === complaint.status);
 
   const progressPercent =
-    complaint.status === "rejected"
+    complaint.status === "rejected" || complaint.status === "escalated"
       ? 0
       : ((currentStepIndex + 1) / statusSteps.length) * 100;
 
@@ -125,7 +151,7 @@ export default function ComplaintDetailPage() {
           {/* Header Card */}
           <Card className="shadow-sm overflow-hidden">
             {/* Progress bar at the top */}
-            {complaint.status !== "rejected" && (
+            {complaint.status !== "rejected" && complaint.status !== "escalated" && (
               <div className="h-1 bg-muted">
                 <div
                   className="h-full bg-gradient-to-r from-primary to-emerald-500 transition-all duration-500"
@@ -143,7 +169,7 @@ export default function ComplaintDetailPage() {
                     <StatusBadge status={complaint.status} />
                     <Badge
                       variant="outline"
-                      className={`text-[10px] font-medium ${pConfig.bg} ${pConfig.color}`}
+                      className={`text-xs font-medium ${pConfig.bg} ${pConfig.color}`}
                     >
                       {complaint.priority} priority
                     </Badge>
@@ -154,6 +180,18 @@ export default function ComplaintDetailPage() {
               <p className="text-muted-foreground text-sm leading-relaxed mb-6">
                 {complaint.description}
               </p>
+
+              {/* Audio Attachment */}
+              {complaint.audioAttachment && (
+                <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    Voice Note
+                  </p>
+                  <audio controls className="w-full h-8">
+                    <source src={complaint.audioAttachment} />
+                  </audio>
+                </div>
+              )}
 
               {/* Info Grid */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -188,7 +226,7 @@ export default function ComplaintDetailPage() {
                     >
                       <div className="flex items-center gap-1.5 text-muted-foreground">
                         <Icon className="h-3.5 w-3.5" />
-                        <span className="text-[11px] font-medium uppercase tracking-wider">
+                        <span className="text-xs font-medium uppercase tracking-wider">
                           {item.label}
                         </span>
                       </div>
@@ -207,7 +245,7 @@ export default function ComplaintDetailPage() {
           </Card>
 
           {/* Status Timeline - Vertical Stepper */}
-          {complaint.status !== "rejected" && (
+          {complaint.status !== "rejected" && complaint.status !== "escalated" && (
             <Card className="shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2">
@@ -290,6 +328,17 @@ export default function ComplaintDetailPage() {
             </Alert>
           )}
 
+          {/* Escalation Alert */}
+          {complaint.status === "escalated" && (
+            <Alert variant="destructive" className="border-orange-300 bg-orange-50 dark:bg-orange-950/20">
+              <Clock className="h-4 w-4 text-orange-600" />
+              <AlertTitle className="text-orange-800 dark:text-orange-300">Complaint Escalated</AlertTitle>
+              <AlertDescription className="text-orange-700 dark:text-orange-400">
+                The assigned worker missed the 48-hour deadline. This complaint has been escalated to the admin for reassignment.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Assigned Worker */}
           {task && (
             <Card className="shadow-sm">
@@ -316,6 +365,44 @@ export default function ComplaintDetailPage() {
                       {new Date(task.deadline).toLocaleString()}
                     </p>
                   </div>
+                  {(() => {
+                    // Only show WhatsApp when task is not accepted or deadline has passed
+                    const isNotAccepted = task.accepted !== true;
+                    const isOverdue = new Date(task.deadline).getTime() < Date.now();
+                    const canMessage = isNotAccepted || isOverdue;
+                    if (!canMessage) return null;
+
+                    // Check if already sent (one-time only per complaint)
+                    const storageKey = `whatsapp-sent-${complaint.id}`;
+                    const alreadySent = typeof window !== "undefined" && localStorage.getItem(storageKey) === "true";
+                    if (alreadySent) {
+                      return (
+                        <Badge variant="secondary" className="text-xs text-muted-foreground gap-1 shrink-0">
+                          <Phone className="h-3 w-3" />
+                          Message Sent
+                        </Badge>
+                      );
+                    }
+
+                    const message = `Hi ${task.workerName}, I'm following up on my complaint:\n\n*${complaint.title}*\nCategory: ${complaint.category}\nLocation: ${complaint.location}\nDepartment: ${complaint.department}\n\nDetails: ${complaint.description}\n\nPlease update me on the progress. Thank you!`;
+                    return (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5 text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 shrink-0"
+                        onClick={async () => {
+                          const result = await sendWhatsAppMessage(getWhatsAppPhone(), message);
+                          if (result.success) {
+                            localStorage.setItem(storageKey, "true");
+                            toast.success(result.fallback ? "WhatsApp opened" : "WhatsApp message sent!");
+                          }
+                        }}
+                      >
+                        <Phone className="h-3.5 w-3.5" />
+                        WhatsApp
+                      </Button>
+                    );
+                  })()}
                 </div>
 
                 {task.quotationAmount != null && (

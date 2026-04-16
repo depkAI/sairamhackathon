@@ -138,3 +138,22 @@ export interface Announcement {
   createdByName: string;
   createdAt: Date;
 }
+
+export type IdeaStatus = "pending" | "approved_by_hod" | "approved_by_admin" | "rejected";
+
+export interface Idea {
+  id: string;
+  title: string;
+  description: string;
+  department: string;
+  status: IdeaStatus;
+  createdBy: string;
+  createdByName: string;
+  rejectionReason?: string;
+  hodReviewedBy?: string;
+  hodReviewedByName?: string;
+  adminReviewedBy?: string;
+  adminReviewedByName?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}

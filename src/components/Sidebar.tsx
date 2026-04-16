@@ -5,7 +5,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   LayoutDashboard,
@@ -13,6 +12,10 @@ import {
   User,
   LogOut,
   KeyRound,
+  Settings,
+  MessageSquare,
+  Lightbulb,
+  Bell,
 } from "lucide-react";
 
 interface NavItem {
@@ -21,28 +24,47 @@ interface NavItem {
   icon: React.ReactNode;
 }
 
-const roleNavItems: Record<string, NavItem[]> = {
-  student: [
-    { label: "Dashboard", href: "/dashboard/student", icon: <LayoutDashboard size={18} /> },
-    { label: "Report Issue", href: "/dashboard/student/new-complaint", icon: <PlusCircle size={18} /> },
-    { label: "Profile", href: "/profile", icon: <User size={18} /> },
-    { label: "Change Password", href: "/change-password", icon: <KeyRound size={18} /> },
-  ],
-  admin: [
-    { label: "Dashboard", href: "/dashboard/admin", icon: <LayoutDashboard size={18} /> },
-    { label: "Profile", href: "/profile", icon: <User size={18} /> },
-    { label: "Change Password", href: "/change-password", icon: <KeyRound size={18} /> },
-  ],
-  hod: [
-    { label: "Dashboard", href: "/dashboard/hod", icon: <LayoutDashboard size={18} /> },
-    { label: "Profile", href: "/profile", icon: <User size={18} /> },
-    { label: "Change Password", href: "/change-password", icon: <KeyRound size={18} /> },
-  ],
-  worker: [
-    { label: "Dashboard", href: "/dashboard/worker", icon: <LayoutDashboard size={18} /> },
-    { label: "Profile", href: "/profile", icon: <User size={18} /> },
-    { label: "Change Password", href: "/change-password", icon: <KeyRound size={18} /> },
-  ],
+const roleNavItems: Record<string, { main: NavItem[]; config: NavItem[] }> = {
+  student: {
+    main: [
+      { label: "Dashboard", href: "/dashboard/student", icon: <LayoutDashboard size={20} /> },
+      { label: "Report Issue", href: "/dashboard/student/new-complaint", icon: <PlusCircle size={20} /> },
+      { label: "My Feedback", href: "/dashboard/student/feedback", icon: <MessageSquare size={20} /> },
+      { label: "Submit Idea", href: "/dashboard/student/ideas", icon: <Lightbulb size={20} /> },
+      { label: "Notifications", href: "/dashboard/student/notifications", icon: <Bell size={20} /> },
+    ],
+    config: [
+      { label: "Profile", href: "/profile", icon: <User size={20} /> },
+      { label: "Change Password", href: "/change-password", icon: <KeyRound size={20} /> },
+    ],
+  },
+  admin: {
+    main: [
+      { label: "Dashboard", href: "/dashboard/admin", icon: <LayoutDashboard size={20} /> },
+    ],
+    config: [
+      { label: "Profile", href: "/profile", icon: <User size={20} /> },
+      { label: "Change Password", href: "/change-password", icon: <KeyRound size={20} /> },
+    ],
+  },
+  hod: {
+    main: [
+      { label: "Dashboard", href: "/dashboard/hod", icon: <LayoutDashboard size={20} /> },
+    ],
+    config: [
+      { label: "Profile", href: "/profile", icon: <User size={20} /> },
+      { label: "Change Password", href: "/change-password", icon: <KeyRound size={20} /> },
+    ],
+  },
+  worker: {
+    main: [
+      { label: "Dashboard", href: "/dashboard/worker", icon: <LayoutDashboard size={20} /> },
+    ],
+    config: [
+      { label: "Profile", href: "/profile", icon: <User size={20} /> },
+      { label: "Change Password", href: "/change-password", icon: <KeyRound size={20} /> },
+    ],
+  },
 };
 
 interface SidebarProps {
@@ -56,7 +78,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
 
   if (!profile) return null;
 
-  const navItems = roleNavItems[profile.role] || [];
+  const sections = roleNavItems[profile.role] || { main: [], config: [] };
   const handleLogout = async () => {
     await logout();
     router.push("/login");
@@ -65,44 +87,87 @@ export default function Sidebar({ onClose }: SidebarProps) {
   const roleLabel =
     profile.role === "hod" ? "HOD" :
     profile.role === "admin" ? "Admin" :
-    profile.role === "worker" ? `Worker` :
+    profile.role === "worker" ? "Worker" :
     "Student";
 
   return (
-    <aside className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
+    <aside className="flex h-full flex-col bg-sidebar border-r border-sidebar-border">
       {/* Logo */}
-      <div className="flex h-16 items-center gap-3 px-6 border-b border-sidebar-border">
+      <div className="flex h-16 items-center gap-3 px-6">
         <Link
           href={`/dashboard/${profile.role}`}
           className="flex items-center gap-3 no-underline"
           onClick={onClose}
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground font-bold text-xs">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold text-sm shadow-md shadow-indigo-500/20">
             CO
           </div>
-          <span className="text-lg font-bold tracking-tight text-sidebar-foreground">
+          <span className="text-[17px] font-bold tracking-tight text-sidebar-foreground">
             CampusOps
           </span>
         </Link>
       </div>
 
-      {/* Nav */}
-      <ScrollArea className="flex-1 px-3 py-4">
-        <div className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">
-          Menu
+      {/* User Profile Card */}
+      <div className="mx-4 mb-2 rounded-xl bg-sidebar-accent/60 p-3.5">
+        <div className="flex items-center gap-3">
+          <Avatar className="h-10 w-10 ring-2 ring-white dark:ring-gray-800 shadow-sm">
+            <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white text-sm font-semibold">
+              {profile.name.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-sidebar-foreground truncate leading-tight">
+              {profile.name}
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">{roleLabel}</p>
+          </div>
         </div>
-        <nav className="flex flex-col gap-1">
-          {navItems.map((item) => {
+      </div>
+
+      {/* Nav */}
+      <ScrollArea className="flex-1 px-3 pt-4">
+        {/* Main Menu */}
+        <div className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/70">
+          Main Menu
+        </div>
+        <nav className="flex flex-col gap-0.5 mb-6">
+          {sections.main.map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 onClick={onClose}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
                   isActive
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm shadow-indigo-500/15"
+                    : "text-sidebar-foreground/65 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                }`}
+              >
+                {item.icon}
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Configuration */}
+        <div className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/70">
+          Settings
+        </div>
+        <nav className="flex flex-col gap-0.5">
+          {sections.config.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onClose}
+                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
+                  isActive
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm shadow-indigo-500/15"
+                    : "text-sidebar-foreground/65 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                 }`}
               >
                 {item.icon}
@@ -113,27 +178,15 @@ export default function Sidebar({ onClose }: SidebarProps) {
         </nav>
       </ScrollArea>
 
-      {/* User section */}
-      <div className="border-t border-sidebar-border p-3">
-        <div className="flex items-center gap-3 rounded-lg px-3 py-2">
-          <Avatar className="h-9 w-9 border border-sidebar-border">
-            <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground text-sm font-semibold">
-              {profile.name.charAt(0).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-sidebar-foreground truncate">{profile.name}</p>
-            <p className="text-[11px] text-sidebar-foreground/50">{roleLabel} &middot; {profile.loginId}</p>
-          </div>
-        </div>
-        <Separator className="my-2 bg-sidebar-border" />
+      {/* Sign Out */}
+      <div className="p-3">
         <Button
           variant="ghost"
           size="sm"
           onClick={handleLogout}
-          className="w-full justify-start gap-3 text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+          className="w-full justify-start gap-3 rounded-xl text-sm text-muted-foreground hover:text-destructive hover:bg-red-50 dark:hover:bg-red-950/30 h-10"
         >
-          <LogOut size={16} />
+          <LogOut size={18} />
           Sign Out
         </Button>
       </div>

@@ -1,5 +1,4 @@
-import { addDoc, collection } from "firebase/firestore";
-import { db } from "./firebase";
+import { supabase } from "./supabase";
 
 export async function sendNotification(
   userId: string,
@@ -7,12 +6,14 @@ export async function sendNotification(
   message: string,
   link?: string
 ) {
-  await addDoc(collection(db, "notifications"), {
-    userId,
+  const { error } = await supabase.from("notifications").insert({
+    user_id: userId,
     title,
     message,
     read: false,
     link: link || null,
-    createdAt: new Date(),
   });
+  if (error) {
+    console.error("Failed to send notification:", error.message);
+  }
 }

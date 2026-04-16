@@ -4,7 +4,11 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { Lock, Eye, EyeOff } from "lucide-react";
+import { Lock, Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function ChangePasswordPage() {
   const { profile, changePassword } = useAuth();
@@ -43,73 +47,111 @@ export default function ChangePasswordPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#f1f5f9", padding: 16 }}>
-      <div style={{ maxWidth: 440, width: "100%", backgroundColor: "#fff", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)", overflow: "hidden" }}>
-        <div style={{ background: "linear-gradient(135deg, #0f1a2e 0%, #1e3a5f 100%)", padding: "32px 24px", textAlign: "center" }}>
-          <div style={{ width: 48, height: 48, backgroundColor: "#f59e0b", borderRadius: "50%", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
-            <Lock size={24} color="#fff" />
+    <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
+      <Card className="w-full max-w-md overflow-hidden shadow-lg">
+        {/* Branded Header */}
+        <div className="bg-gradient-to-br from-slate-900 to-slate-700 px-6 py-8 text-center">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-amber-500">
+            <Lock className="h-6 w-6 text-white" />
           </div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#fff", margin: "0 0 4px" }}>Change Password</h1>
-          <p style={{ fontSize: 14, color: "#94a3b8", margin: 0 }}>
+          <h1 className="text-xl font-bold text-white">Change Password</h1>
+          <p className="mt-1 text-sm text-slate-400">
             {profile?.mustChangePassword
               ? "You must change your password before continuing."
               : "Update your account password."}
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ padding: 24 }}>
-          {profile && (
-            <div style={{ marginBottom: 16, padding: "10px 14px", backgroundColor: "#f8fafc", borderRadius: 8, fontSize: 13, color: "#475569" }}>
-              Logged in as <strong>{profile.loginId}</strong> ({profile.name})
+        <CardContent className="p-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Logged-in user info */}
+            {profile && (
+              <div className="flex items-center gap-2 rounded-lg bg-muted px-3 py-2.5 text-sm text-muted-foreground">
+                <ShieldCheck className="h-4 w-4 shrink-0" />
+                <span>
+                  Logged in as <strong className="text-foreground">{profile.loginId}</strong> ({profile.name})
+                </span>
+              </div>
+            )}
+
+            {/* Current Password */}
+            <div className="space-y-2">
+              <Label htmlFor="current-password">Current Password</Label>
+              <div className="relative">
+                <Input
+                  id="current-password"
+                  type={showOld ? "text" : "password"}
+                  required
+                  value={oldPassword}
+                  onChange={(e) => setOldPassword(e.target.value)}
+                  placeholder="Enter current password"
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowOld(!showOld)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {showOld ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
-          )}
 
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Current Password</label>
-            <div style={{ position: "relative" }}>
-              <input type={showOld ? "text" : "password"} required value={oldPassword} onChange={(e) => setOldPassword(e.target.value)}
-                placeholder="Enter current password"
-                style={{ width: "100%", padding: "10px 42px 10px 14px", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 14, outline: "none", boxSizing: "border-box" }} />
-              <button type="button" onClick={() => setShowOld(!showOld)}
-                style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#9ca3af", padding: 4 }}>
-                {showOld ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
+            {/* New Password */}
+            <div className="space-y-2">
+              <Label htmlFor="new-password">New Password</Label>
+              <div className="relative">
+                <Input
+                  id="new-password"
+                  type={showNew ? "text" : "password"}
+                  required
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="At least 6 characters"
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNew(!showNew)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {showNew ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
-          </div>
 
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>New Password</label>
-            <div style={{ position: "relative" }}>
-              <input type={showNew ? "text" : "password"} required value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="At least 6 characters"
-                style={{ width: "100%", padding: "10px 42px 10px 14px", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 14, outline: "none", boxSizing: "border-box" }} />
-              <button type="button" onClick={() => setShowNew(!showNew)}
-                style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#9ca3af", padding: 4 }}>
-                {showNew ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
+            {/* Confirm Password */}
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">Confirm New Password</Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter new password"
+              />
             </div>
-          </div>
 
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>Confirm New Password</label>
-            <input type="password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Re-enter new password"
-              style={{ width: "100%", padding: "10px 14px", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 14, outline: "none", boxSizing: "border-box" }} />
-          </div>
+            {/* Submit */}
+            <Button type="submit" className="w-full" size="lg" disabled={loading}>
+              {loading ? "Updating..." : "Change Password"}
+            </Button>
 
-          <button type="submit" disabled={loading}
-            style={{ width: "100%", padding: 12, backgroundColor: loading ? "#93c5fd" : "#2563eb", color: "#fff", border: "none", borderRadius: 8, fontSize: 15, fontWeight: 600, cursor: loading ? "default" : "pointer" }}>
-            {loading ? "Updating..." : "Change Password"}
-          </button>
-
-          {!profile?.mustChangePassword && (
-            <button type="button" onClick={() => router.back()}
-              style={{ width: "100%", padding: 12, backgroundColor: "transparent", color: "#64748b", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 14, cursor: "pointer", marginTop: 8 }}>
-              Cancel
-            </button>
-          )}
-        </form>
-      </div>
+            {/* Cancel */}
+            {!profile?.mustChangePassword && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => router.back()}
+              >
+                Cancel
+              </Button>
+            )}
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

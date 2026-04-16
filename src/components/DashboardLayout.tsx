@@ -3,34 +3,35 @@
 import { useState } from "react";
 import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
-import { Menu, X } from "lucide-react";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { Menu } from "lucide-react";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#f1f5f9" }}>
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-40 md:hidden" style={{ backgroundColor: "rgba(0,0,0,0.5)" }} onClick={() => setSidebarOpen(false)} />
-      )}
-
-      {/* Sidebar - hidden on mobile by default */}
-      <div className={`${sidebarOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 transition-transform duration-200 fixed z-50`}>
-        <Sidebar />
+    <div className="min-h-screen bg-background">
+      {/* Desktop sidebar */}
+      <div className="hidden md:fixed md:inset-y-0 md:flex md:w-64 md:flex-col">
+        <Sidebar onClose={() => setSidebarOpen(false)} />
       </div>
 
-      {/* Mobile menu button */}
-      <button
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="fixed top-4 left-4 z-50 md:hidden p-2 rounded-lg shadow-md"
-        style={{ backgroundColor: "#fff", border: "1px solid #e5e7eb" }}
-      >
-        {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
-      </button>
+      {/* Mobile sidebar */}
+      <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+        <SheetContent side="left" className="w-64 p-0 border-r-0 bg-sidebar [&>button]:hidden">
+          <SheetTitle className="sr-only">Navigation</SheetTitle>
+          <Sidebar onClose={() => setSidebarOpen(false)} />
+        </SheetContent>
+      </Sheet>
 
-      <Navbar />
-      <main className="md:ml-64 p-4 md:p-6">{children}</main>
+      {/* Main area */}
+      <div className="md:pl-64 flex flex-col min-h-screen">
+        <Navbar onMenuClick={() => setSidebarOpen(true)} />
+        <main className="flex-1 p-4 md:p-6 lg:p-8">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

@@ -5,23 +5,47 @@ import { useComplaints, useTasks, useFeedback } from "@/lib/useData";
 import DashboardLayout from "@/components/DashboardLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import StatusBadge from "@/components/StatusBadge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, MapPin, Building, Tag, Clock, User, Star, CheckCircle2 } from "lucide-react";
+import {
+  ArrowLeft,
+  MapPin,
+  Building,
+  Tag,
+  Clock,
+  Star,
+  CheckCircle2,
+  XCircle,
+  IndianRupee,
+  FileText,
+  Circle,
+  User,
+  CalendarClock,
+  MessageSquare,
+} from "lucide-react";
 
 const statusSteps = [
-  { key: "pending", label: "Submitted" },
-  { key: "reviewed", label: "Reviewed by HOD" },
-  { key: "assigned", label: "Worker Assigned" },
-  { key: "in_progress", label: "In Progress" },
-  { key: "completed", label: "Completed" },
-  { key: "verified", label: "Verified" },
+  { key: "pending", label: "Submitted", description: "Your complaint has been received" },
+  { key: "reviewed", label: "Reviewed by HOD", description: "Department head has reviewed the issue" },
+  { key: "assigned", label: "Worker Assigned", description: "A maintenance worker has been assigned" },
+  { key: "in_progress", label: "In Progress", description: "Work is currently underway" },
+  { key: "completed", label: "Completed", description: "The issue has been resolved" },
+  { key: "verified", label: "Verified", description: "Resolution has been verified" },
 ];
 
 export default function ComplaintDetailPage() {
   const { id } = useParams();
   const { profile } = useAuth();
-  const complaints = useComplaints(profile ? { field: "createdBy", value: profile.uid } : undefined);
+  const complaints = useComplaints(
+    profile ? { field: "createdBy", value: profile.uid } : undefined
+  );
   const allTasks = useTasks();
   const allFeedback = useFeedback();
 
@@ -34,136 +58,338 @@ export default function ComplaintDetailPage() {
       <ProtectedRoute allowedRoles={["student"]}>
         <DashboardLayout>
           <div className="max-w-3xl mx-auto text-center py-20">
-            <p className="text-gray-500">Complaint not found.</p>
-            <Link href="/dashboard/student" className="text-blue-600 hover:underline mt-2 inline-block">Back to Dashboard</Link>
+            <div className="h-16 w-16 rounded-2xl bg-muted/80 flex items-center justify-center mx-auto mb-4">
+              <FileText className="h-8 w-8 text-muted-foreground/40" />
+            </div>
+            <h2 className="text-lg font-semibold text-foreground mb-1">
+              Complaint not found
+            </h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              This complaint may have been removed or you don't have access.
+            </p>
+            <Button variant="outline">
+              <Link href="/dashboard/student">Back to Dashboard</Link>
+            </Button>
           </div>
         </DashboardLayout>
       </ProtectedRoute>
     );
   }
 
-  const currentStepIndex = complaint.status === "rejected"
-    ? -1
-    : statusSteps.findIndex((s) => s.key === complaint.status);
+  const currentStepIndex =
+    complaint.status === "rejected"
+      ? -1
+      : statusSteps.findIndex((s) => s.key === complaint.status);
+
+  const progressPercent =
+    complaint.status === "rejected"
+      ? 0
+      : ((currentStepIndex + 1) / statusSteps.length) * 100;
+
+  const priorityConfig: Record<string, { color: string; bg: string }> = {
+    critical: {
+      color: "text-red-700 dark:text-red-400",
+      bg: "bg-red-500/10 border-red-200 dark:border-red-800",
+    },
+    high: {
+      color: "text-amber-700 dark:text-amber-400",
+      bg: "bg-amber-500/10 border-amber-200 dark:border-amber-800",
+    },
+    medium: {
+      color: "text-blue-700 dark:text-blue-400",
+      bg: "bg-blue-500/10 border-blue-200 dark:border-blue-800",
+    },
+    low: {
+      color: "text-emerald-700 dark:text-emerald-400",
+      bg: "bg-emerald-500/10 border-emerald-200 dark:border-emerald-800",
+    },
+  };
+
+  const pConfig = priorityConfig[complaint.priority] || priorityConfig.medium;
 
   return (
     <ProtectedRoute allowedRoles={["student"]}>
       <DashboardLayout>
-        <div className="max-w-3xl mx-auto">
-          <Link href="/dashboard/student" className="flex items-center gap-2 text-gray-500 hover:text-gray-700 mb-6 text-sm">
-            <ArrowLeft size={16} /> Back to Dashboard
-          </Link>
+        <div className="max-w-3xl mx-auto space-y-6">
+          {/* Back */}
+          <Button variant="ghost" size="sm" className="-ml-2">
+            <Link
+              href="/dashboard/student"
+              className="gap-2 text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Dashboard
+            </Link>
+          </Button>
 
-          {/* Header */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h1 className="text-xl font-bold text-gray-900 mb-2">{complaint.title}</h1>
-                <StatusBadge status={complaint.status} />
+          {/* Header Card */}
+          <Card className="shadow-sm overflow-hidden">
+            {/* Progress bar at the top */}
+            {complaint.status !== "rejected" && (
+              <div className="h-1 bg-muted">
+                <div
+                  className="h-full bg-gradient-to-r from-primary to-emerald-500 transition-all duration-500"
+                  style={{ width: `${progressPercent}%` }}
+                />
               </div>
-              <span className={`text-xs px-3 py-1 rounded-full font-medium ${
-                complaint.priority === "critical" ? "bg-red-100 text-red-700 border border-red-200" :
-                complaint.priority === "high" ? "bg-yellow-100 text-yellow-700 border border-yellow-200" :
-                complaint.priority === "medium" ? "bg-yellow-100 text-yellow-700 border border-yellow-200" :
-                "bg-green-100 text-green-700 border border-green-200"
-              }`}>
-                {complaint.priority} priority
-              </span>
-            </div>
+            )}
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div className="space-y-3 flex-1 min-w-0">
+                  <h1 className="text-xl font-bold text-foreground leading-tight">
+                    {complaint.title}
+                  </h1>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <StatusBadge status={complaint.status} />
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] font-medium ${pConfig.bg} ${pConfig.color}`}
+                    >
+                      {complaint.priority} priority
+                    </Badge>
+                  </div>
+                </div>
+              </div>
 
-            <p className="text-gray-600 mb-6">{complaint.description}</p>
+              <p className="text-muted-foreground text-sm leading-relaxed mb-6">
+                {complaint.description}
+              </p>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              <div className="flex items-center gap-2 text-gray-500">
-                <Tag size={14} className="text-gray-400" />
-                <span className="capitalize">{complaint.category}</span>
-              </div>
-              <div className="flex items-center gap-2 text-gray-500">
-                <MapPin size={14} className="text-gray-400" />
-                {complaint.location}
-              </div>
-              <div className="flex items-center gap-2 text-gray-500">
-                <Building size={14} className="text-gray-400" />
-                {complaint.department}
-              </div>
-              <div className="flex items-center gap-2 text-gray-500">
-                <Clock size={14} className="text-gray-400" />
-                {new Date(complaint.createdAt).toLocaleDateString()}
-              </div>
-            </div>
-          </div>
-
-          {/* Status Timeline */}
-          {complaint.status !== "rejected" && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-              <h2 className="font-semibold text-gray-900 mb-4">Status Timeline</h2>
-              <div className="space-y-4">
-                {statusSteps.map((step, i) => {
-                  const isCompleted = i <= currentStepIndex;
-                  const isCurrent = i === currentStepIndex;
+              {/* Info Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {[
+                  {
+                    icon: Tag,
+                    label: "Category",
+                    value: complaint.category,
+                    capitalize: true,
+                  },
+                  {
+                    icon: MapPin,
+                    label: "Location",
+                    value: complaint.location,
+                  },
+                  {
+                    icon: Building,
+                    label: "Department",
+                    value: complaint.department,
+                  },
+                  {
+                    icon: Clock,
+                    label: "Reported",
+                    value: new Date(complaint.createdAt).toLocaleDateString(),
+                  },
+                ].map((item, i) => {
+                  const Icon = item.icon;
                   return (
-                    <div key={step.key} className="flex items-center gap-4">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        isCompleted ? "bg-green-500 text-white" : "bg-gray-100 text-gray-400"
-                      } ${isCurrent ? "ring-2 ring-green-200" : ""}`}>
-                        {isCompleted ? <CheckCircle2 size={16} /> : <span className="text-xs font-medium">{i + 1}</span>}
+                    <div
+                      key={i}
+                      className="bg-muted/50 rounded-lg p-3 space-y-1"
+                    >
+                      <div className="flex items-center gap-1.5 text-muted-foreground">
+                        <Icon className="h-3.5 w-3.5" />
+                        <span className="text-[11px] font-medium uppercase tracking-wider">
+                          {item.label}
+                        </span>
                       </div>
-                      <div className={`text-sm ${isCompleted ? "text-gray-900 font-medium" : "text-gray-400"}`}>
-                        {step.label}
-                      </div>
+                      <p
+                        className={`text-sm font-medium text-foreground ${
+                          item.capitalize ? "capitalize" : ""
+                        }`}
+                      >
+                        {item.value}
+                      </p>
                     </div>
                   );
                 })}
               </div>
-            </div>
+            </CardContent>
+          </Card>
+
+          {/* Status Timeline - Vertical Stepper */}
+          {complaint.status !== "rejected" && (
+            <Card className="shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-primary" />
+                  Status Timeline
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-2">
+                <div className="relative">
+                  {statusSteps.map((step, i) => {
+                    const isCompleted = i <= currentStepIndex;
+                    const isCurrent = i === currentStepIndex;
+                    const isLast = i === statusSteps.length - 1;
+
+                    return (
+                      <div key={step.key} className="flex gap-4 relative">
+                        {/* Vertical line connector */}
+                        {!isLast && (
+                          <div className="absolute left-[15px] top-[32px] w-0.5 h-[calc(100%-8px)]">
+                            <div
+                              className={`w-full h-full ${
+                                i < currentStepIndex
+                                  ? "bg-emerald-500"
+                                  : "bg-muted"
+                              }`}
+                            />
+                          </div>
+                        )}
+
+                        {/* Step indicator */}
+                        <div className="shrink-0 relative z-10">
+                          <div
+                            className={`flex h-8 w-8 items-center justify-center rounded-full transition-all ${
+                              isCompleted
+                                ? "bg-emerald-500 text-white shadow-sm shadow-emerald-500/25"
+                                : "bg-muted text-muted-foreground"
+                            } ${
+                              isCurrent
+                                ? "ring-[3px] ring-emerald-500/20 ring-offset-2 ring-offset-background"
+                                : ""
+                            }`}
+                          >
+                            {isCompleted ? (
+                              <CheckCircle2 className="h-4 w-4" />
+                            ) : (
+                              <Circle className="h-3.5 w-3.5" />
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Step content */}
+                        <div className={`pb-6 ${isLast ? "pb-0" : ""}`}>
+                          <p
+                            className={`text-sm font-medium ${
+                              isCompleted
+                                ? "text-foreground"
+                                : "text-muted-foreground"
+                            } ${isCurrent ? "text-emerald-600 dark:text-emerald-400" : ""}`}
+                          >
+                            {step.label}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {step.description}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
           )}
 
-          {/* Rejection Reason */}
+          {/* Rejection Alert */}
           {complaint.status === "rejected" && complaint.rejectionReason && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-6 mb-6">
-              <h2 className="font-semibold text-red-800 mb-2">Complaint Rejected</h2>
-              <p className="text-red-700 text-sm">{complaint.rejectionReason}</p>
-            </div>
+            <Alert variant="destructive">
+              <XCircle className="h-4 w-4" />
+              <AlertTitle>Complaint Rejected</AlertTitle>
+              <AlertDescription>{complaint.rejectionReason}</AlertDescription>
+            </Alert>
           )}
 
           {/* Assigned Worker */}
           {task && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-              <h2 className="font-semibold text-gray-900 mb-3">Assigned Worker</h2>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-semibold">
-                  {task.workerName.charAt(0)}
+            <Card className="shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <User className="h-4 w-4 text-primary" />
+                  Assigned Worker
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 pt-2">
+                <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+                  <Avatar className="h-11 w-11">
+                    <AvatarFallback className="bg-primary/10 text-primary font-bold text-lg">
+                      {task.workerName.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-foreground">
+                      {task.workerName}
+                    </p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                      <CalendarClock className="h-3.5 w-3.5" />
+                      Deadline:{" "}
+                      {new Date(task.deadline).toLocaleString()}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <div className="font-medium text-gray-800">{task.workerName}</div>
-                  <div className="text-xs text-gray-500">Deadline: {new Date(task.deadline).toLocaleString()}</div>
-                </div>
-              </div>
-              {task.quotationAmount && (
-                <div className="mt-3 p-3 bg-gray-50 rounded-lg text-sm">
-                  <span className="text-gray-500">Quotation:</span> <span className="font-medium text-gray-800">₹{task.quotationAmount}</span>
-                  {task.quotationNote && <span className="text-gray-500 ml-2">— {task.quotationNote}</span>}
-                </div>
-              )}
-              {task.notes && (
-                <div className="mt-3 p-3 bg-green-50 rounded-lg text-sm">
-                  <span className="text-gray-500">Completion Notes:</span> <span className="text-gray-700">{task.notes}</span>
-                </div>
-              )}
-            </div>
+
+                {task.quotationAmount != null && (
+                  <div className="flex items-start gap-3 p-3 bg-blue-50/80 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900 rounded-lg">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 shrink-0">
+                      <IndianRupee className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">
+                        Quotation: {task.quotationAmount}
+                      </p>
+                      {task.quotationNote && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {task.quotationNote}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {task.notes && (
+                  <div className="flex items-start gap-3 p-3 bg-emerald-50/80 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900 rounded-lg">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 shrink-0">
+                      <FileText className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                        Completion Notes
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {task.notes}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           )}
 
           {/* Feedback */}
           {feedback && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <h2 className="font-semibold text-gray-900 mb-3">Your Feedback</h2>
-              <div className="flex items-center gap-1 mb-2">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star key={i} size={18} className={i < feedback.rating ? "text-yellow-400" : "text-gray-300"} fill={i < feedback.rating ? "currentColor" : "none"} />
-                ))}
-              </div>
-              <p className="text-gray-600 text-sm">{feedback.feedbackText}</p>
-            </div>
+            <Card className="shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-primary" />
+                  Your Feedback
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-2">
+                <div className="bg-amber-50/50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900 rounded-lg p-4">
+                  <div className="flex items-center gap-1 mb-3">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star
+                        key={i}
+                        size={20}
+                        className={
+                          i < feedback.rating
+                            ? "text-amber-400 fill-amber-400"
+                            : "text-muted-foreground/20"
+                        }
+                      />
+                    ))}
+                    <span className="text-sm font-medium text-foreground ml-2">
+                      {feedback.rating}/5
+                    </span>
+                  </div>
+                  {feedback.feedbackText && (
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      &ldquo;{feedback.feedbackText}&rdquo;
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           )}
         </div>
       </DashboardLayout>

@@ -4,7 +4,24 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useFeedback, useComplaints, useTasks } from "@/lib/useData";
 import DashboardLayout from "@/components/DashboardLayout";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import { User, Mail, Phone, Building, Shield, Calendar, Star, BarChart3, Hash, Wrench } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import {
+  Mail,
+  Phone,
+  Building,
+  Calendar,
+  Star,
+  BarChart3,
+  Hash,
+  Wrench,
+  ClipboardList,
+  CheckCircle2,
+  Clock,
+  TrendingUp,
+} from "lucide-react";
 
 export default function ProfilePage() {
   const { profile } = useAuth();
@@ -22,109 +39,184 @@ export default function ProfilePage() {
     const task = tasks.find((t) => t.complaintId === f.complaintId);
     return !!task;
   });
-  const avgRating = workerFeedback.length > 0
-    ? workerFeedback.reduce((sum, f) => sum + f.rating, 0) / workerFeedback.length : 0;
+  const avgRating =
+    workerFeedback.length > 0
+      ? workerFeedback.reduce((sum, f) => sum + f.rating, 0) / workerFeedback.length
+      : 0;
 
-  const roleLabel = profile.role === "hod" ? "HOD / Department Head" : profile.role === "admin" ? "Administrator" : profile.role === "worker" ? "Maintenance Worker" : "Student";
+  const roleLabel =
+    profile.role === "hod"
+      ? "HOD / Department Head"
+      : profile.role === "admin"
+        ? "Administrator"
+        : profile.role === "worker"
+          ? "Maintenance Worker"
+          : "Student";
+
+  const roleBadgeVariant =
+    profile.role === "admin"
+      ? "destructive"
+      : profile.role === "hod"
+        ? "default"
+        : "secondary";
+
+  const infoItems = [
+    { icon: Hash, label: "Login ID", value: profile.loginId },
+    { icon: Mail, label: "Email", value: profile.email },
+    { icon: Phone, label: "Phone", value: profile.phone },
+    { icon: Building, label: "Department", value: profile.department },
+    ...(profile.specialty
+      ? [{ icon: Wrench, label: "Specialty", value: profile.specialty, capitalize: true }]
+      : []),
+    {
+      icon: Calendar,
+      label: "Joined",
+      value: new Date(profile.createdAt).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }),
+    },
+  ];
+
+  const completedTasks = tasks.filter((t) => t.status === "completed").length;
 
   return (
     <ProtectedRoute>
       <DashboardLayout>
-        <div style={{ maxWidth: 640, margin: "0 auto" }}>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: "#0f172a", marginBottom: 24 }}>My Profile</h1>
+        <div className="mx-auto max-w-2xl space-y-6">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">My Profile</h1>
 
-          <div style={{ backgroundColor: "#fff", borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", border: "1px solid #e5e7eb", padding: 24, marginBottom: 24 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24 }}>
-              <div style={{ width: 64, height: 64, backgroundColor: "#3b82f6", color: "#fff", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 24 }}>
-                {profile.name.charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <h2 style={{ fontSize: 20, fontWeight: 700, color: "#0f172a", margin: 0 }}>{profile.name}</h2>
-                <span style={{ fontSize: 13, padding: "2px 10px", borderRadius: 12, backgroundColor: "#dbeafe", color: "#1d4ed8", fontWeight: 500 }}>{roleLabel}</span>
-              </div>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, color: "#475569", fontSize: 14 }}>
-                <Hash size={18} style={{ color: "#94a3b8" }} />
-                <span><strong>Login ID:</strong> {profile.loginId}</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, color: "#475569", fontSize: 14 }}>
-                <Mail size={18} style={{ color: "#94a3b8" }} />
-                <span>{profile.email}</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, color: "#475569", fontSize: 14 }}>
-                <Phone size={18} style={{ color: "#94a3b8" }} />
-                <span>{profile.phone}</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, color: "#475569", fontSize: 14 }}>
-                <Building size={18} style={{ color: "#94a3b8" }} />
-                <span>{profile.department}</span>
-              </div>
-              {profile.specialty && (
-                <div style={{ display: "flex", alignItems: "center", gap: 12, color: "#475569", fontSize: 14 }}>
-                  <Wrench size={18} style={{ color: "#94a3b8" }} />
-                  <span style={{ textTransform: "capitalize" }}>{profile.specialty}</span>
+          {/* Profile Info Card */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-16 w-16 text-2xl">
+                  <AvatarFallback className="bg-primary text-primary-foreground font-bold text-xl">
+                    {profile.name.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="space-y-1">
+                  <h2 className="text-xl font-bold text-foreground">{profile.name}</h2>
+                  <Badge variant={roleBadgeVariant as "default" | "secondary" | "destructive"}>
+                    {roleLabel}
+                  </Badge>
                 </div>
-              )}
-              <div style={{ display: "flex", alignItems: "center", gap: 12, color: "#475569", fontSize: 14 }}>
-                <Calendar size={18} style={{ color: "#94a3b8" }} />
-                <span>Joined {new Date(profile.createdAt).toLocaleDateString()}</span>
               </div>
-            </div>
-          </div>
 
+              <Separator className="my-5" />
+
+              <div className="grid gap-4">
+                {infoItems.map((item) => (
+                  <div key={item.label} className="flex items-center gap-3 text-sm">
+                    <item.icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="text-muted-foreground">{item.label}:</span>
+                    <span
+                      className={`font-medium text-foreground ${
+                        (item as { capitalize?: boolean }).capitalize ? "capitalize" : ""
+                      }`}
+                    >
+                      {item.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Student Stats */}
           {profile.role === "student" && (
-            <div style={{ backgroundColor: "#fff", borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", border: "1px solid #e5e7eb", padding: 24 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 600, color: "#0f172a", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-                <BarChart3 size={18} style={{ color: "#3b82f6" }} /> My Statistics
-              </h3>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
-                <div style={{ textAlign: "center", padding: 16, backgroundColor: "#eff6ff", borderRadius: 8 }}>
-                  <div style={{ fontSize: 28, fontWeight: 700, color: "#1d4ed8" }}>{complaints.length}</div>
-                  <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>Total Reported</div>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <BarChart3 className="h-4 w-4 text-primary" />
+                  My Statistics
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-3 gap-3">
+                  <Card className="border-0 bg-blue-50 shadow-none dark:bg-blue-950/30">
+                    <CardContent className="flex flex-col items-center justify-center p-4">
+                      <ClipboardList className="mb-1 h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      <span className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                        {complaints.length}
+                      </span>
+                      <span className="text-xs text-muted-foreground">Total Reported</span>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-0 bg-green-50 shadow-none dark:bg-green-950/30">
+                    <CardContent className="flex flex-col items-center justify-center p-4">
+                      <CheckCircle2 className="mb-1 h-5 w-5 text-green-600 dark:text-green-400" />
+                      <span className="text-2xl font-bold text-green-700 dark:text-green-300">
+                        {complaints.filter((c) => ["completed", "verified"].includes(c.status)).length}
+                      </span>
+                      <span className="text-xs text-muted-foreground">Resolved</span>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-0 bg-yellow-50 shadow-none dark:bg-yellow-950/30">
+                    <CardContent className="flex flex-col items-center justify-center p-4">
+                      <Clock className="mb-1 h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                      <span className="text-2xl font-bold text-yellow-700 dark:text-yellow-300">
+                        {complaints.filter((c) => !["completed", "verified", "rejected"].includes(c.status)).length}
+                      </span>
+                      <span className="text-xs text-muted-foreground">In Progress</span>
+                    </CardContent>
+                  </Card>
                 </div>
-                <div style={{ textAlign: "center", padding: 16, backgroundColor: "#f0fdf4", borderRadius: 8 }}>
-                  <div style={{ fontSize: 28, fontWeight: 700, color: "#16a34a" }}>{complaints.filter((c) => ["completed", "verified"].includes(c.status)).length}</div>
-                  <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>Resolved</div>
-                </div>
-                <div style={{ textAlign: "center", padding: 16, backgroundColor: "#fefce8", borderRadius: 8 }}>
-                  <div style={{ fontSize: 28, fontWeight: 700, color: "#ca8a04" }}>{complaints.filter((c) => !["completed", "verified", "rejected"].includes(c.status)).length}</div>
-                  <div style={{ fontSize: 12, color: "#64748b", marginTop: 4 }}>In Progress</div>
-                </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           )}
 
+          {/* Worker Stats */}
           {profile.role === "worker" && (
-            <div style={{ backgroundColor: "#fff", borderRadius: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.06)", border: "1px solid #e5e7eb", padding: 24 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 600, color: "#0f172a", marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-                <BarChart3 size={18} style={{ color: "#3b82f6" }} /> My Performance
-              </h3>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
-                <div style={{ textAlign: "center", padding: 16, backgroundColor: "#eff6ff", borderRadius: 8 }}>
-                  <div style={{ fontSize: 24, fontWeight: 700, color: "#1d4ed8" }}>{tasks.length}</div>
-                  <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>Total</div>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <BarChart3 className="h-4 w-4 text-primary" />
+                  My Performance
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <Card className="border-0 bg-blue-50 shadow-none dark:bg-blue-950/30">
+                    <CardContent className="flex flex-col items-center justify-center p-4">
+                      <ClipboardList className="mb-1 h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      <span className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                        {tasks.length}
+                      </span>
+                      <span className="text-xs text-muted-foreground">Total</span>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-0 bg-green-50 shadow-none dark:bg-green-950/30">
+                    <CardContent className="flex flex-col items-center justify-center p-4">
+                      <CheckCircle2 className="mb-1 h-5 w-5 text-green-600 dark:text-green-400" />
+                      <span className="text-2xl font-bold text-green-700 dark:text-green-300">
+                        {completedTasks}
+                      </span>
+                      <span className="text-xs text-muted-foreground">Done</span>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-0 bg-yellow-50 shadow-none dark:bg-yellow-950/30">
+                    <CardContent className="flex flex-col items-center justify-center p-4">
+                      <TrendingUp className="mb-1 h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                      <span className="text-2xl font-bold text-yellow-700 dark:text-yellow-300">
+                        {tasks.length > 0 ? Math.round((completedTasks / tasks.length) * 100) : 0}%
+                      </span>
+                      <span className="text-xs text-muted-foreground">Rate</span>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-0 bg-purple-50 shadow-none dark:bg-purple-950/30">
+                    <CardContent className="flex flex-col items-center justify-center p-4">
+                      <Star className="mb-1 h-5 w-5 fill-yellow-400 text-yellow-400" />
+                      <span className="text-2xl font-bold text-purple-700 dark:text-purple-300">
+                        {avgRating > 0 ? avgRating.toFixed(1) : "\u2014"}
+                      </span>
+                      <span className="text-xs text-muted-foreground">Rating</span>
+                    </CardContent>
+                  </Card>
                 </div>
-                <div style={{ textAlign: "center", padding: 16, backgroundColor: "#f0fdf4", borderRadius: 8 }}>
-                  <div style={{ fontSize: 24, fontWeight: 700, color: "#16a34a" }}>{tasks.filter((t) => t.status === "completed").length}</div>
-                  <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>Done</div>
-                </div>
-                <div style={{ textAlign: "center", padding: 16, backgroundColor: "#fefce8", borderRadius: 8 }}>
-                  <div style={{ fontSize: 24, fontWeight: 700, color: "#ca8a04" }}>
-                    {tasks.length > 0 ? Math.round((tasks.filter((t) => t.status === "completed").length / tasks.length) * 100) : 0}%
-                  </div>
-                  <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>Rate</div>
-                </div>
-                <div style={{ textAlign: "center", padding: 16, backgroundColor: "#faf5ff", borderRadius: 8 }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
-                    <Star size={16} style={{ color: "#eab308" }} fill="#eab308" />
-                    <span style={{ fontSize: 24, fontWeight: 700, color: "#7c3aed" }}>{avgRating > 0 ? avgRating.toFixed(1) : "—"}</span>
-                  </div>
-                  <div style={{ fontSize: 11, color: "#64748b", marginTop: 4 }}>Rating</div>
-                </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           )}
         </div>
       </DashboardLayout>

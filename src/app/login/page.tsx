@@ -4,16 +4,22 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { DEMO_CREDENTIALS } from "@/lib/demo-data";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import toast from "react-hot-toast";
-import { GraduationCap, Shield, Wrench, Eye, EyeOff } from "lucide-react";
+import { GraduationCap, Shield, Wrench, Eye, EyeOff, ArrowRight } from "lucide-react";
 
 type RoleTab = "student" | "staff" | "worker";
 
-const roleTabs: { key: RoleTab; label: string; icon: React.ReactNode; idLabel: string; idPlaceholder: string; pwLabel: string; pwPlaceholder: string }[] = [
-  { key: "student", label: "Student", icon: <GraduationCap size={18} />, idLabel: "Roll Number", idPlaceholder: "e.g. 22CSE101", pwLabel: "Date of Birth", pwPlaceholder: "DD-MM-YYYY" },
-  { key: "staff", label: "Staff / Admin", icon: <Shield size={18} />, idLabel: "Staff ID", idPlaceholder: "e.g. STAFF001", pwLabel: "Date of Birth", pwPlaceholder: "DD-MM-YYYY" },
-  { key: "worker", label: "Worker", icon: <Wrench size={18} />, idLabel: "Username", idPlaceholder: "e.g. rajesh@electrician", pwLabel: "Date of Birth", pwPlaceholder: "DD-MM-YYYY" },
-];
+const tabConfig: Record<RoleTab, { icon: React.ReactNode; idLabel: string; idPlaceholder: string }> = {
+  student: { icon: <GraduationCap className="h-4 w-4" />, idLabel: "Roll Number", idPlaceholder: "e.g. 22CSE101" },
+  staff: { icon: <Shield className="h-4 w-4" />, idLabel: "Staff ID", idPlaceholder: "e.g. STAFF001" },
+  worker: { icon: <Wrench className="h-4 w-4" />, idLabel: "Username", idPlaceholder: "e.g. rajesh@electrician" },
+};
 
 const demoByRole: Record<RoleTab, typeof DEMO_CREDENTIALS> = {
   student: DEMO_CREDENTIALS.filter((c) => c.role === "student"),
@@ -30,7 +36,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const currentTab = roleTabs.find((t) => t.key === activeTab)!;
+  const cfg = tabConfig[activeTab];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,11 +44,7 @@ export default function LoginPage() {
     try {
       const profile = await login(loginId, password);
       toast.success(`Welcome, ${profile.name}!`);
-      if (profile.mustChangePassword) {
-        router.push("/change-password");
-      } else {
-        router.push(`/dashboard/${profile.role}`);
-      }
+      router.push(profile.mustChangePassword ? "/change-password" : `/dashboard/${profile.role}`);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Login failed");
     } finally {
@@ -50,155 +52,77 @@ export default function LoginPage() {
     }
   };
 
-  const fillCredentials = (id: string, pw: string) => {
-    setLoginId(id);
-    setPassword(pw);
-  };
-
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#f1f5f9", padding: "16px" }}>
-      <div style={{ maxWidth: 440, width: "100%", backgroundColor: "#fff", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)", overflow: "hidden" }}>
-        {/* Header */}
-        <div style={{ background: "linear-gradient(135deg, #0f1a2e 0%, #1e3a5f 100%)", padding: "32px 24px", textAlign: "center" }}>
-          <div style={{ width: 48, height: 48, backgroundColor: "#3b82f6", borderRadius: 12, display: "inline-flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 16, color: "#fff", marginBottom: 12 }}>
-            CO
-          </div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: "#fff", margin: "0 0 4px" }}>CampusOps</h1>
-          <p style={{ fontSize: 14, color: "#94a3b8", margin: 0 }}>Smart Campus Issue Reporter</p>
-        </div>
-
-        {/* Role Tabs */}
-        <div style={{ display: "flex", borderBottom: "1px solid #e5e7eb" }}>
-          {roleTabs.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => { setActiveTab(tab.key); setLoginId(""); setPassword(""); }}
-              style={{
-                flex: 1,
-                padding: "14px 8px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 6,
-                fontSize: 13,
-                fontWeight: 600,
-                border: "none",
-                cursor: "pointer",
-                transition: "all 0.15s",
-                backgroundColor: activeTab === tab.key ? "#fff" : "#f8fafc",
-                color: activeTab === tab.key ? "#2563eb" : "#64748b",
-                borderBottom: activeTab === tab.key ? "2px solid #2563eb" : "2px solid transparent",
-              }}
-            >
-              {tab.icon}
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Login Form */}
-        <form onSubmit={handleSubmit} style={{ padding: "24px" }}>
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
-              {currentTab.idLabel}
-            </label>
-            <input
-              type="text"
-              required
-              value={loginId}
-              onChange={(e) => setLoginId(e.target.value)}
-              placeholder={currentTab.idPlaceholder}
-              style={{ width: "100%", padding: "10px 14px", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 14, outline: "none", boxSizing: "border-box" }}
-            />
+    <div className="min-h-screen flex items-center justify-center bg-muted/50 px-4 py-8">
+      <div className="w-full max-w-[440px] animate-fade-in">
+        <Card className="shadow-xl border-border/50 overflow-hidden">
+          {/* Header */}
+          <div className="relative p-8 text-center" style={{ background: "linear-gradient(135deg, #0f1a2e 0%, #1e3a5f 100%)" }}>
+            <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center font-bold text-primary-foreground mx-auto mb-3 animate-pulse-glow">CO</div>
+            <h1 className="text-2xl font-bold text-white">CampusOps</h1>
+            <p className="text-blue-200/70 text-sm mt-1">Smart Campus Issue Reporter</p>
           </div>
 
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 6 }}>
-              {currentTab.pwLabel}
-            </label>
-            <div style={{ position: "relative" }}>
-              <input
-                type={showPassword ? "text" : "password"}
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={currentTab.pwPlaceholder}
-                style={{ width: "100%", padding: "10px 42px 10px 14px", border: "1px solid #d1d5db", borderRadius: 8, fontSize: 14, outline: "none", boxSizing: "border-box" }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#9ca3af", padding: 4 }}
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
-          </div>
+          {/* Role Tabs */}
+          <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as RoleTab); setLoginId(""); setPassword(""); }} className="w-full">
+            <TabsList className="grid w-full grid-cols-3 rounded-none h-12 bg-muted/50">
+              <TabsTrigger value="student" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-background">
+                <GraduationCap className="h-4 w-4" /> Student
+              </TabsTrigger>
+              <TabsTrigger value="staff" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-background">
+                <Shield className="h-4 w-4" /> Staff
+              </TabsTrigger>
+              <TabsTrigger value="worker" className="gap-1.5 text-xs sm:text-sm data-[state=active]:bg-background">
+                <Wrench className="h-4 w-4" /> Worker
+              </TabsTrigger>
+            </TabsList>
 
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              width: "100%",
-              padding: "12px",
-              backgroundColor: loading ? "#93c5fd" : "#2563eb",
-              color: "#fff",
-              border: "none",
-              borderRadius: 8,
-              fontSize: 15,
-              fontWeight: 600,
-              cursor: loading ? "default" : "pointer",
-              transition: "background-color 0.15s",
-            }}
-          >
-            {loading ? "Signing in..." : "Sign In"}
-          </button>
-        </form>
+            <TabsContent value={activeTab} className="mt-0">
+              <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="loginId">{cfg.idLabel}</Label>
+                  <Input id="loginId" type="text" required value={loginId} onChange={(e) => setLoginId(e.target.value)} placeholder={cfg.idPlaceholder} className="h-11" />
+                </div>
 
-        {/* Demo Credentials */}
-        {isDemoMode && (
-          <div style={{ padding: "0 24px 24px" }}>
-            <div style={{ backgroundColor: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 12, padding: 16 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: "#1d4ed8", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 10px" }}>
-                Demo Accounts — Click to fill
-              </p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {demoByRole[activeTab].map((acc) => (
-                  <button
-                    key={acc.loginId}
-                    onClick={() => fillCredentials(acc.loginId, acc.plainPassword)}
-                    type="button"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "8px 12px",
-                      backgroundColor: "#fff",
-                      border: "1px solid #dbeafe",
-                      borderRadius: 8,
-                      cursor: "pointer",
-                      textAlign: "left",
-                      fontSize: 13,
-                      width: "100%",
-                      transition: "border-color 0.15s",
-                    }}
-                  >
-                    <div>
-                      <span style={{ fontWeight: 600, color: "#1e293b" }}>{acc.loginId}</span>
-                      <span style={{ color: "#94a3b8", marginLeft: 8, fontSize: 12 }}>{acc.label}</span>
-                    </div>
-                    <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 12, backgroundColor: "#dbeafe", color: "#1d4ed8", fontWeight: 500, textTransform: "capitalize" }}>
-                      {acc.role}
-                    </span>
-                  </button>
-                ))}
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password (Date of Birth)</Label>
+                  <div className="relative">
+                    <Input id="password" type={showPassword ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="DD-MM-YYYY" className="h-11 pr-10" />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <Button type="submit" disabled={loading} className="w-full h-11 text-base">
+                  {loading ? "Signing in..." : <>Sign In <ArrowRight className="ml-2 h-4 w-4" /></>}
+                </Button>
+              </form>
+            </TabsContent>
+          </Tabs>
+
+          {/* Demo Credentials */}
+          {isDemoMode && (
+            <div className="px-6 pb-6">
+              <div className="bg-accent rounded-xl p-4 border border-primary/10">
+                <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-3">Demo Accounts — Click to fill</p>
+                <div className="space-y-1.5">
+                  {demoByRole[activeTab].map((acc) => (
+                    <button key={acc.loginId} type="button" onClick={() => { setLoginId(acc.loginId); setPassword(acc.plainPassword); }}
+                      className="w-full flex items-center justify-between px-3 py-2.5 bg-card rounded-lg border border-border/50 hover:border-primary/30 hover:shadow-sm transition-all text-left text-sm group">
+                      <div>
+                        <span className="font-semibold text-foreground group-hover:text-primary transition-colors">{acc.loginId}</span>
+                        <span className="text-muted-foreground text-xs ml-2 hidden sm:inline">{acc.label}</span>
+                      </div>
+                      <Badge variant="secondary" className="text-[10px] capitalize">{acc.role}</Badge>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-3 text-center">Passwords are Date of Birth (DD-MM-YYYY)</p>
               </div>
-              <p style={{ fontSize: 11, color: "#60a5fa", margin: "8px 0 0", textAlign: "center" }}>
-                Passwords are Date of Birth (DD-MM-YYYY)
-              </p>
             </div>
-          </div>
-        )}
+          )}
+        </Card>
       </div>
     </div>
   );
